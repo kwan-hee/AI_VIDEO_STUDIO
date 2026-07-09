@@ -4,7 +4,7 @@
   "description": "Workflow Engine 출력 계약. workflow/workflow_engine.py run_workflow() 반환 형식. 요청 하나를 기획→라우팅→(mock)생성→에셋등록→타임라인→합성까지 엮은 통제된 결과. 실 외부호출/실 ffmpeg 없음.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["request", "project", "needs_clarification", "selections", "assets", "timeline", "composition"],
+  "required": ["request", "project", "needs_clarification", "selections", "assets", "timeline", "composition", "story"],
   "properties": {
     "request": { "type": "string", "minLength": 1 },
     "project": {
@@ -33,6 +33,7 @@
     },
     "assets": { "type": "array", "items": { "type": "object" } },
     "timeline": { "type": ["object", "null"] },
-    "composition": { "type": ["object", "null"] }
+    "composition": { "type": ["object", "null"] },
+    "story": { "type": ["object", "null"] }
   }
 }

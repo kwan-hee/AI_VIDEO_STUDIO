@@ -24,7 +24,7 @@ import sys
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 for _sub in ("orchestrator", "planner", "routing", "providers", "assets", "timeline",
-             "composer", "reliability", "logging"):
+             "composer", "reliability", "logging", "story"):
     _p = os.path.join(_ROOT, _sub)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -38,6 +38,7 @@ from timeline_builder import build_timeline           # noqa: E402
 from ffmpeg_composer import compose_from_timeline      # noqa: E402
 from retry_manager import run_with_retry               # noqa: E402  (Phase 7-2 신뢰성 배선)
 from execution_logger import ExecutionLogger          # noqa: E402  (Phase 7-2 신뢰성 배선)
+from story_generator import generate_story             # noqa: E402  (Phase 7 스토리 배선)
 
 import nano_banana_provider                            # noqa: E402
 import higgsfield_provider                             # noqa: E402
@@ -132,15 +133,47 @@ def _cap_dir(output_root, capability):
     return os.path.join(output_root, _CAP_SUBDIR[capability])
 
 
+# 장면 기반 스토리 대본이 필요한 프로젝트(영상)
+_STORY_PROJECTS = {"malli", "baseball"}
+_DEFAULT_SCENES = 3
+
+
+def _scene_prompt(story, step_name):
+    """생성된 스토리 장면에서 단계별 프롬프트/내레이션을 뽑는다. 썸네일 등은 장면 미사용(None)."""
+    if not story:
+        return None
+    scenes = story["scenes"]
+    if step_name == "image":
+        return scenes[0]["image_prompt"]
+    if step_name == "video":
+        return scenes[0]["video_prompt"]
+    if step_name == "voice":
+        return " ".join(s["narration"] for s in scenes)
+    return None
+
+
+def _scene_duration(story, step_name):
+    """단계별 타임라인 길이(초). 시각=첫 장면 길이, 음성=전체 장면 합. 그 외 None."""
+    if not story:
+        return None
+    scenes = story["scenes"]
+    if step_name in ("image", "video"):
+        return scenes[0]["duration"]
+    if step_name == "voice":
+        return sum(s["duration"] for s in scenes)
+    return None
+
+
 def run_workflow(request, output_root=None, handlers=None, composer_runner=None, exclude=None,
-                 logger=None, max_attempts=1):
+                 logger=None, max_attempts=1, story_generator=None):
     """
     요청 하나 → 통제된 워크플로 결과.
-    기획→라우팅→(Retry Manager로)생성→에셋등록→타임라인→합성. 실 외부호출/실 ffmpeg 없음.
+    (스토리 생성)→기획→라우팅→(Retry Manager로)생성→에셋등록→타임라인→합성. 실 외부호출/실 ffmpeg 없음.
     handlers: 공급자별 핸들러 오버라이드(기본 mock provider).
     exclude: capability 별 제외 공급자(failover 테스트/정책). 예: {"generate_video":["Higgsfield"]}
     logger: ExecutionLogger 주입(기본 내부 생성). run_start/provider_call/retry/failure/output/run_end 방출.
     max_attempts: Retry Manager 의 후보별 재시도 횟수(기본 1). failover 는 후보 순회로 처리.
+    story_generator: Story Generator 의 generator 주입(기본 mock 스토리). 실 Claude 는 옵트인 전용.
     """
     if not isinstance(request, str) or not request.strip():
         raise ValueError("request 는 비어 있지 않은 문자열이어야 한다.")
@@ -159,12 +192,22 @@ def run_workflow(request, output_root=None, handlers=None, composer_runner=None,
         return {
             "request": request, "project": project, "needs_clarification": True,
             "selections": [], "assets": [], "timeline": None, "composition": None,
+            "story": None,
         }
+
+    # 스토리 생성: 장면 기반 영상 프로젝트에서 계획/실행 이전에 대본을 만든다(기본 mock).
+    story = None
+    if project in _STORY_PROJECTS:
+        sr = generate_story(request, title=request, num_scenes=_DEFAULT_SCENES,
+                            generator=story_generator)
+        if sr["status"] == "success":
+            story = sr["story"]
 
     plan = plan_execution(orch)
     mgr = AssetManager()
     selections = []
     last_image_path = None
+    durations = {}   # asset_id → 장면 길이(초). 스토리가 있을 때만 채운다.
 
     for step in plan["steps"]:
         name = step["step"]
@@ -181,7 +224,10 @@ def run_workflow(request, output_root=None, handlers=None, composer_runner=None,
             logger.failure(step=name, message="사용 가능한 공급자 없음")
             continue
 
-        text = _resolve_prompt(prompts, step.get("prompt_key")) or f"{project} {name}"
+        # 프롬프트: 생성된 스토리 장면 우선, 없으면 Orchestrator 프롬프트
+        text = (_scene_prompt(story, name)
+                or _resolve_prompt(prompts, step.get("prompt_key"))
+                or f"{project} {name}")
         inputs = [last_image_path] if (cap == "generate_video" and last_image_path) else []
 
         def _call(provider, attempt, _cap=cap, _text=text, _inputs=inputs):
@@ -209,12 +255,15 @@ def run_workflow(request, output_root=None, handlers=None, composer_runner=None,
             continue
 
         path = retry_res["result"]["output"]["path"]
-        mgr.register(STEP_ASSET_TYPE[name], provider, path, status="ready")
+        asset = mgr.register(STEP_ASSET_TYPE[name], provider, path, status="ready")
+        dur = _scene_duration(story, name)
+        if dur is not None:
+            durations[asset["asset_id"]] = dur
         if name == "image":
             last_image_path = path
 
     assets = mgr.list_assets()
-    timeline = build_timeline(plan, assets)
+    timeline = build_timeline(plan, assets, durations=durations or None)
 
     composition = None
     has_visual = any(e["layer"] == "visual" for e in timeline["entries"])
@@ -238,6 +287,7 @@ def run_workflow(request, output_root=None, handlers=None, composer_runner=None,
         "assets": assets,
         "timeline": timeline,
         "composition": composition,
+        "story": story,
     }
 
 

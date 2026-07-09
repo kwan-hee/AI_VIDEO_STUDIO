@@ -224,6 +224,76 @@ def test_output_paths_unchanged():
         assert "final/malli_timeline_" in final and final.endswith(".mp4")
 
 
+# --- Phase 7-2b: Story Generator 배선 증명 ---
+
+
+def test_story_generated_and_attached():
+    # title -> story generation: 워크플로가 스토리를 생성해 결과에 담는다.
+    with tempfile.TemporaryDirectory() as d:
+        r = _run(MALLI_REQ, d)
+        assert r["story"] is not None
+        assert r["story"]["title"] == MALLI_REQ
+        assert len(r["story"]["scenes"]) == 3
+        _assert_valid(r)
+
+
+def test_story_scenes_feed_provider_prompts():
+    # story -> workflow -> providers: 장면 프롬프트가 공급자 요청 프롬프트로 흐른다.
+    captured = {}
+
+    def capture_image(request, output_dir=None, writer=None):
+        captured.setdefault("image_prompt", request["prompt"])  # 첫 호출=image 단계
+        from provider_sdk import make_result
+        import os as _os
+        _os.makedirs(output_dir, exist_ok=True)
+        p = _os.path.join(output_dir, "img.png")
+        open(p, "wb").write(b"\x89PNGmock")
+        return make_result("Nano Banana", "generate_image", status="success",
+                           output={"path": p, "type": "image", "mock": True, "prompt": request["prompt"]},
+                           message="ok")
+
+    with tempfile.TemporaryDirectory() as d:
+        r = run_workflow(MALLI_REQ, output_root=d, composer_runner=_mock_compose_runner,
+                         handlers={"Nano Banana": capture_image})
+        # image 단계 프롬프트 = 스토리 첫 장면 image_prompt
+        assert captured["image_prompt"] == r["story"]["scenes"][0]["image_prompt"]
+
+
+def test_injected_story_generator_used():
+    # 커스텀 story generator 주입 → 그 장면이 워크플로에 반영된다.
+    def custom(title, topic, num_scenes):
+        return {
+            "title": title, "summary": "요약", "moral": "교훈",
+            "scenes": [{"scene_number": 1, "narration": "내레이션",
+                        "image_prompt": "CUSTOM_IMG", "video_prompt": "CUSTOM_VID",
+                        "duration": 7.0}],
+        }
+    with tempfile.TemporaryDirectory() as d:
+        r = run_workflow(MALLI_REQ, output_root=d, composer_runner=_mock_compose_runner,
+                         story_generator=custom)
+        assert r["story"]["scenes"][0]["image_prompt"] == "CUSTOM_IMG"
+        # 장면 길이가 타임라인에 반영(첫 장면 7.0)
+        img_entry = next(e for e in r["timeline"]["entries"] if e["asset_type"] == "image")
+        assert img_entry["duration"] == 7.0
+
+
+def test_end_to_end_malli_still_succeeds_with_story():
+    # end-to-end Malli 파이프라인은 스토리 배선 후에도 성공한다.
+    with tempfile.TemporaryDirectory() as d:
+        r = _run(MALLI_REQ, d)
+        assert r["composition"]["status"] == "success"
+        assert sorted(a["type"] for a in r["assets"]) == ["audio", "image", "thumbnail", "video"]
+        _assert_valid(r)
+
+
+def test_non_story_project_has_no_story():
+    # blog 등 비영상 프로젝트는 스토리 미생성.
+    with tempfile.TemporaryDirectory() as d:
+        r = _run(BLOG_REQ, d)
+        assert r["story"] is None
+        _assert_valid(r)
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
