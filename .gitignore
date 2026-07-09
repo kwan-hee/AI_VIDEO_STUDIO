@@ -1,19 +1,46 @@
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
 .venv/
 venv/
+env/
 
-# 생성 산출물 (미디어/데모 출력)
-output/audio/
-output/final/
-output/video/
-output/image/
+# VS Code
+.vscode/
 
 # OS
-Thumbs.db
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Output (generated files)
+output/
+*.mp3
+*.wav
+*.mp4
+*.png
+*.jpg
+
+# Environment
+.env
+.env.*
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Cache
+.cache/
 
 # OMC 세션 상태 (추적 제외)
 .omc/
