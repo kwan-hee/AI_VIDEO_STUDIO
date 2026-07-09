@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LocalExecutionResult",
+  "description": "Local Executor 출력 계약. executors/local_executor.py execute_local() 반환 형식. 로컬 모의 결과, 실제 실행 아님.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "results"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"]
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "step", "provider", "action", "status", "output_path", "message"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "step": {
+            "type": "string",
+            "enum": ["story", "script", "outline", "article", "image", "video", "voice", "thumbnail", "edit"]
+          },
+          "provider": {
+            "type": ["string", "null"],
+            "enum": ["Google Flow", "Higgsfield", "Nano Banana", "Edge TTS", "Magnific", "FFmpeg", null]
+          },
+          "action": {
+            "type": ["string", "null"],
+            "enum": ["generate_image", "enhance_image", "generate_video", "text_to_speech", "compose", null]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "failed"]
+          },
+          "output_path": { "type": ["string", "null"] },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

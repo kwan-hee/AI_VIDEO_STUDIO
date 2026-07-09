@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 생성 산출물 (미디어/데모 출력)
+output/audio/
+output/final/
+output/video/
+output/image/
+
+# OS
+Thumbs.db
+.DS_Store

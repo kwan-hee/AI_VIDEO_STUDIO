@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TaskAnalysis",
+  "description": "Task Analyzer 출력 계약. analyzer/task_analyzer.py analyze_task() 반환 형식.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "content_type", "required_tasks", "needs_clarification"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"]
+    },
+    "content_type": {
+      "type": "string",
+      "enum": ["story_video", "explainer_video", "thumbnail_image", "blog_text", "unknown"]
+    },
+    "required_tasks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "image_generation",
+          "video_generation",
+          "voice_generation",
+          "subtitle_generation",
+          "composition",
+          "quality_enhancement",
+          "text_writing"
+        ]
+      }
+    },
+    "needs_clarification": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PromptSet",
+  "description": "Prompt Generator 출력 계약. generator/prompt_generator.py generate_prompts() 반환 형식. 프롬프트 텍스트만, 실행 아님.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "prompts"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"]
+    },
+    "prompts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["story_prompt", "image_prompt", "video_prompt", "voice_prompt", "thumbnail_prompt"],
+      "properties": {
+        "story_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "image_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "video_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "voice_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "thumbnail_prompt": { "$ref": "#/definitions/prompt_or_null" }
+      }
+    }
+  },
+  "definitions": {
+    "prompt_or_null": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "text"],
+          "properties": {
+            "provider": {
+              "type": ["string", "null"],
+              "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Edge TTS", null]
+            },
+            "text": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    }
+  }
+}

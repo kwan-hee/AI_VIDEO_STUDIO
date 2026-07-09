@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProviderRecommendation",
+  "description": "Provider Selector 출력 계약. selector/provider_selector.py select_providers() 반환 형식. 추천만, 실행 아님.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "providers"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"]
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "video", "voice", "editing", "image_enhancement"],
+      "properties": {
+        "image": {
+          "type": ["string", "null"],
+          "enum": ["Nano Banana", null]
+        },
+        "video": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["primary", "backup"],
+              "properties": {
+                "primary": { "type": "string", "enum": ["Google Flow", "Higgsfield"] },
+                "backup": { "type": "string", "enum": ["Google Flow", "Higgsfield"] }
+              }
+            }
+          ]
+        },
+        "voice": {
+          "type": ["string", "null"],
+          "enum": ["Edge TTS", null]
+        },
+        "editing": {
+          "type": ["string", "null"],
+          "enum": ["FFmpeg", null]
+        },
+        "image_enhancement": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["provider", "targets"],
+              "properties": {
+                "provider": { "type": "string", "enum": ["Magnific"] },
+                "targets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["thumbnail", "first_scene", "last_scene", "opening_scene"]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

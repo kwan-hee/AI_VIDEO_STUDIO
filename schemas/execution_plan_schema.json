@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecutionPlan",
+  "description": "Execution Planner 출력 계약. planner/execution_planner.py plan_execution() 반환 형식. project 유형별 순서 단계 목록. 실행 아님, 계획만.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "steps"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "step", "provider", "backup", "prompt_key"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "step": {
+            "type": "string",
+            "enum": ["story", "script", "outline", "article", "image", "video", "voice", "thumbnail", "edit"]
+          },
+          "provider": {
+            "type": ["string", "null"],
+            "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Edge TTS", "FFmpeg", null]
+          },
+          "backup": {
+            "type": ["string", "null"],
+            "enum": ["Google Flow", "Higgsfield", null]
+          },
+          "prompt_key": {
+            "type": ["string", "null"],
+            "enum": ["story_prompt", "image_prompt", "video_prompt", "voice_prompt", "thumbnail_prompt", null]
+          }
+        }
+      }
+    }
+  }
+}

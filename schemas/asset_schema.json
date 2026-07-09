@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset",
+  "description": "Asset Manager 에셋 계약. assets/asset_manager.py register() 가 반환하는 단일 에셋 형식. 레지스트리 항목, 실행 아님.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["asset_id", "type", "provider", "path", "status", "created_at"],
+  "properties": {
+    "asset_id": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "enum": ["story", "image", "video", "audio", "thumbnail"]
+    },
+    "provider": {
+      "type": ["string", "null"],
+      "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Edge TTS", "Magnific", "FFmpeg", null]
+    },
+    "path": { "type": ["string", "null"] },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "ready", "failed"]
+    },
+    "created_at": { "type": "string", "minLength": 1 }
+  }
+}

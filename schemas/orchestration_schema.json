@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OrchestrationResult",
+  "description": "Orchestrator 결합 출력 계약. orchestrator/orchestrator.py orchestrate() 반환 형식. 3단계 결과를 하나로 묶은 것. 실행 아님.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request", "project", "needs_clarification", "task_analysis", "provider_recommendation", "prompts"],
+  "properties": {
+    "request": { "type": "string", "minLength": 1 },
+    "project": { "type": "string", "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"] },
+    "needs_clarification": { "type": "boolean" },
+
+    "task_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "content_type", "required_tasks", "needs_clarification"],
+      "properties": {
+        "project": { "type": "string", "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"] },
+        "content_type": { "type": "string", "enum": ["story_video", "explainer_video", "thumbnail_image", "blog_text", "unknown"] },
+        "required_tasks": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["image_generation", "video_generation", "voice_generation", "subtitle_generation", "composition", "quality_enhancement", "text_writing"] }
+        },
+        "needs_clarification": { "type": "boolean" }
+      }
+    },
+
+    "provider_recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "providers"],
+      "properties": {
+        "project": { "type": "string", "enum": ["malli", "baseball", "thumbnail", "blog", "unknown"] },
+        "providers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["image", "video", "voice", "editing", "image_enhancement"],
+          "properties": {
+            "image": { "type": ["string", "null"], "enum": ["Nano Banana", null] },
+            "video": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["primary", "backup"],
+                  "properties": {
+                    "primary": { "type": "string", "enum": ["Google Flow", "Higgsfield"] },
+                    "backup": { "type": "string", "enum": ["Google Flow", "Higgsfield"] }
+                  }
+                }
+              ]
+            },
+            "voice": { "type": ["string", "null"], "enum": ["Edge TTS", null] },
+            "editing": { "type": ["string", "null"], "enum": ["FFmpeg", null] },
+            "image_enhancement": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["provider", "targets"],
+                  "properties": {
+                    "provider": { "type": "string", "enum": ["Magnific"] },
+                    "targets": {
+                      "type": "array",
+                      "items": { "type": "string", "enum": ["thumbnail", "first_scene", "last_scene", "opening_scene"] }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "prompts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["story_prompt", "image_prompt", "video_prompt", "voice_prompt", "thumbnail_prompt"],
+      "properties": {
+        "story_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "image_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "video_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "voice_prompt": { "$ref": "#/definitions/prompt_or_null" },
+        "thumbnail_prompt": { "$ref": "#/definitions/prompt_or_null" }
+      }
+    }
+  },
+  "definitions": {
+    "prompt_or_null": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "text"],
+          "properties": {
+            "provider": { "type": ["string", "null"], "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Edge TTS", null] },
+            "text": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    }
+  }
+}
