@@ -33,11 +33,30 @@ _DEFAULT_OUTPUT_DIR = os.path.join(_ROOT, "output", "enhanced")
 # mock 보정 이미지 바이트(PNG 시그니처 + 표식). 실 보정 아님, 배관 검증용 placeholder.
 _MOCK_BYTES = b"\x89PNG\r\n\x1a\nmagnific-mock"
 
+# 실 실행 옵트인 환경변수. "1" 일 때만 실 백엔드를 시도한다(기본은 mock).
+_REAL_ENV = "MAGNIFIC_REAL"
+
 
 def _mock_writer(path, source):
     """실 공급자 없이 placeholder 보정 이미지 파일을 기록한다."""
     with open(path, "wb") as f:
         f.write(_MOCK_BYTES)
+
+
+def _real_writer(path, source):
+    """
+    실 이미지 보정 백엔드로 파일을 기록한다(옵트인 전용). source 는 원본 이미지 경로.
+    실 백엔드(SDK/API)가 연결되어 있지 않으면 RuntimeError 를 올려
+    generate 가 status=failed 로 보고하게 한다. 실 백엔드가 준비되면 여기서 호출하도록 교체한다.
+    """
+    try:
+        import magnific_sdk  # 실 백엔드(선택 설치). 미설치 시 ImportError.
+    except ImportError as e:
+        raise RuntimeError(
+            "실 Magnific 백엔드가 연결되어 있지 않다. "
+            f"({_REAL_ENV}=1 옵트인했으나 SDK/API 미연결)"
+        ) from e
+    magnific_sdk.enhance_image(source=source, out_path=path)  # pragma: no cover
 
 
 def _rel(path):
@@ -56,10 +75,12 @@ def _validate_request(request):
         raise ValueError(f"지원 capability 는 {CAPABILITY} 뿐이다: {request.get('capability')}")
 
 
-def generate(request, output_dir=None, writer=None):
+def generate(request, output_dir=None, writer=None, real=None):
     """
     Provider SDK request → 원본 이미지 보정 후 SDK result.
-    원본 이미지(inputs[0])가 필요하다. 현재는 mock writer 로 output/enhanced/ 에 저장.
+    원본 이미지(inputs[0])가 필요하다. 기본은 mock writer 로 output/enhanced/ 에 저장.
+    실 실행은 옵트인 전용이다. real=True 또는 환경변수 MAGNIFIC_REAL=1 일 때만 실 백엔드를 시도한다.
+    writer 를 직접 주입하면 그 writer 가 최우선이다(테스트/커스텀 백엔드).
     request 오류는 ValueError. 원본 누락/보정 실패는 status="failed".
     """
     _validate_request(request)
@@ -76,8 +97,15 @@ def generate(request, output_dir=None, writer=None):
     key = hashlib.md5(source.encode("utf-8")).hexdigest()[:10]
     path = os.path.join(out_dir, f"magnific_{key}.png")
 
-    is_mock = writer is None
-    writer = writer or _mock_writer
+    # 모드 결정: 주입 writer > 실 옵트인 > mock(기본)
+    if real is None:
+        real = os.environ.get(_REAL_ENV) == "1"
+    if writer is not None:
+        is_mock = False
+    elif real:
+        writer, is_mock = _real_writer, False
+    else:
+        writer, is_mock = _mock_writer, True
     try:
         writer(path, source)
         if not os.path.exists(path) or os.path.getsize(path) == 0:

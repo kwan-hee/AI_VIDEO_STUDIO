@@ -149,6 +149,53 @@ def test_no_other_provider_imports():
         assert forbidden not in src, f"금지 참조 발견: {forbidden}"
 
 
+# --- 실 실행 옵트인 (Phase 6). 기본 mock 유지, 실 백엔드 미설치 시 graceful fail ---
+
+from magnific_provider import _REAL_ENV  # noqa: E402
+
+
+def test_default_is_mock_without_optin():
+    with tempfile.TemporaryDirectory() as d:
+        r = generate(_req(), output_dir=d)     # 옵트인 없음
+        assert r["status"] == "success"
+        assert r["output"]["mock"] is True     # 기본은 mock
+
+
+def test_real_param_optin_fails_gracefully_without_backend():
+    with tempfile.TemporaryDirectory() as d:
+        r = generate(_req(), output_dir=d, real=True)   # 명시 옵트인, 백엔드 미설치
+        assert r["status"] == "failed"
+        assert r["output"] is None
+        assert "실패" in r["message"]
+        _assert_valid(r)
+
+
+def test_real_env_flag_respected():
+    prev = os.environ.get(_REAL_ENV)
+    os.environ[_REAL_ENV] = "1"
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            r = generate(_req(), output_dir=d)  # 환경변수 옵트인 → 실 경로(백엔드 없어 실패)
+            assert r["status"] == "failed"
+    finally:
+        if prev is None:
+            os.environ.pop(_REAL_ENV, None)
+        else:
+            os.environ[_REAL_ENV] = prev
+
+
+def test_env_unset_stays_mock():
+    prev = os.environ.pop(_REAL_ENV, None)
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            r = generate(_req(), output_dir=d)  # 환경변수 없음 → mock 성공
+            assert r["status"] == "success"
+            assert r["output"]["mock"] is True
+    finally:
+        if prev is not None:
+            os.environ[_REAL_ENV] = prev
+
+
 def _run():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
