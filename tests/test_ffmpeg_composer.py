@@ -180,6 +180,164 @@ def test_real_compose_optional():
         assert os.path.getsize(os.path.join(out, os.path.basename(r["output_path"]))) > 0
 
 
+# --- Timeline 통합 (Sprint 13 enhancement) ---
+# compose_from_timeline: Timeline Builder 출력 + Asset Manager 레지스트리로 합성.
+# 기존 compose() 는 건드리지 않는다.
+
+from ffmpeg_composer import compose_from_timeline  # noqa: E402
+
+
+def _asset(asset_id, type, path, status="ready"):
+    return {"asset_id": asset_id, "type": type, "provider": None,
+            "path": path, "status": status, "created_at": "2026-07-09T00:00:00+00:00"}
+
+
+def _entry(asset_id, asset_type, start, dur, layer):
+    return {"asset_id": asset_id, "asset_type": asset_type, "start_time": start,
+            "end_time": round(start + dur, 3), "duration": dur, "layer": layer}
+
+
+class _Capture:
+    def __init__(self):
+        self.args = None
+
+    def __call__(self, args, output_path):
+        self.args = args
+        with open(output_path, "wb") as f:
+            f.write(b"\x00\x00\x00\x18ftypmp42dummy")
+
+
+def test_timeline_image_audio_compose():
+    with tempfile.TemporaryDirectory() as d:
+        img = _touch(d, "01.png")
+        aud = _touch(d, "voice.mp3")
+        out = os.path.join(d, "out")
+        assets = [_asset("image_0001", "image", img), _asset("audio_0001", "audio", aud)]
+        timeline = {
+            "project": "malli",
+            "entries": [_entry("image_0001", "image", 0.0, 5.0, "visual"),
+                        _entry("audio_0001", "audio", 0.0, 5.0, "audio")],
+            "total_duration": 5.0,
+        }
+        r = compose_from_timeline(timeline, assets, output_dir=out, runner=_fake_runner)
+        assert r["status"] == "success"
+        assert r["provider"] == "FFmpeg"
+        assert r["format"] == "mp4"
+        assert r["inputs_used"] == {"images": 1, "videos": 0, "audio": 1}
+        files = [f for f in os.listdir(out) if f.endswith(".mp4")]
+        assert len(files) == 1
+        _assert_valid(r)
+
+
+def test_timeline_visual_order_and_duration_in_args():
+    # video 가 등록상 먼저여도 timeline start_time 순서(이미지 0s, 비디오 5s)를 따른다.
+    with tempfile.TemporaryDirectory() as d:
+        img = _touch(d, "01.png")
+        vid = _touch(d, "02.mp4")
+        out = os.path.join(d, "out")
+        assets = [_asset("video_0002", "video", vid), _asset("image_0001", "image", img)]
+        timeline = {
+            "project": "malli",
+            "entries": [_entry("image_0001", "image", 0.0, 3.0, "visual"),
+                        _entry("video_0002", "video", 3.0, 7.0, "visual")],
+            "total_duration": 10.0,
+        }
+        cap = _Capture()
+        r = compose_from_timeline(timeline, assets, output_dir=out, runner=cap)
+        assert r["status"] == "success"
+        # 입력 순서: 이미지(start 0) 먼저, 비디오(start 3) 다음
+        assert cap.args.index(img) < cap.args.index(vid)
+        # 각 클립 duration 이 -t 값으로 반영
+        assert "3.0" in cap.args  # 이미지 duration
+        assert "7.0" in cap.args  # 비디오 duration
+        assert "concat=n=2" in " ".join(cap.args)
+
+
+def test_timeline_multi_audio_concat():
+    with tempfile.TemporaryDirectory() as d:
+        img = _touch(d, "01.png")
+        a1 = _touch(d, "a1.mp3")
+        a2 = _touch(d, "a2.mp3")
+        out = os.path.join(d, "out")
+        assets = [_asset("image_0001", "image", img),
+                  _asset("audio_0001", "audio", a1), _asset("audio_0002", "audio", a2)]
+        timeline = {
+            "project": "baseball",
+            "entries": [_entry("image_0001", "image", 0.0, 5.0, "visual"),
+                        _entry("audio_0001", "audio", 0.0, 3.0, "audio"),
+                        _entry("audio_0002", "audio", 3.0, 2.0, "audio")],
+            "total_duration": 5.0,
+        }
+        cap = _Capture()
+        r = compose_from_timeline(timeline, assets, output_dir=out, runner=cap)
+        assert r["status"] == "success"
+        assert r["inputs_used"]["audio"] == 2
+        assert "concat=n=2:v=0:a=1" in " ".join(cap.args)
+
+
+def test_timeline_missing_asset_id_failed():
+    with tempfile.TemporaryDirectory() as d:
+        out = os.path.join(d, "out")
+        timeline = {
+            "project": "malli",
+            "entries": [_entry("ghost_0001", "image", 0.0, 5.0, "visual")],
+            "total_duration": 5.0,
+        }
+        r = compose_from_timeline(timeline, [], output_dir=out, runner=_fake_runner)
+        assert r["status"] == "failed"
+        assert r["output_path"] is None
+        _assert_valid(r)
+
+
+def test_timeline_asset_without_path_failed():
+    with tempfile.TemporaryDirectory() as d:
+        out = os.path.join(d, "out")
+        assets = [_asset("image_0001", "image", None)]  # path 없음
+        timeline = {
+            "project": "malli",
+            "entries": [_entry("image_0001", "image", 0.0, 5.0, "visual")],
+            "total_duration": 5.0,
+        }
+        r = compose_from_timeline(timeline, assets, output_dir=out, runner=_fake_runner)
+        assert r["status"] == "failed"
+        _assert_valid(r)
+
+
+def test_timeline_no_visual_raises():
+    with tempfile.TemporaryDirectory() as d:
+        aud = _touch(d, "voice.mp3")
+        assets = [_asset("audio_0001", "audio", aud)]
+        timeline = {
+            "project": "malli",
+            "entries": [_entry("audio_0001", "audio", 0.0, 5.0, "audio")],
+            "total_duration": 5.0,
+        }
+        try:
+            compose_from_timeline(timeline, assets, runner=_fake_runner)
+        except ValueError:
+            return
+        raise AssertionError("시각 항목 없음이 거부되지 않음")
+
+
+def test_timeline_bad_input_rejected():
+    for bad in [None, "x", 3, []]:
+        try:
+            compose_from_timeline(bad, [], runner=_fake_runner)
+        except (ValueError, TypeError):
+            continue
+        raise AssertionError(f"잘못된 timeline 이 거부되지 않음: {bad!r}")
+
+
+def test_existing_compose_unchanged_by_enhancement():
+    # 기존 compose() 경로가 그대로 동작함을 재확인 (enhancement 가 회귀 없음).
+    with tempfile.TemporaryDirectory() as d:
+        vid = _touch(d, "clip.mp4")
+        out = os.path.join(d, "out")
+        r = compose({"videos": [vid]}, output_dir=out, runner=_fake_runner)
+        assert r["status"] == "success"
+        assert r["inputs_used"] == {"images": 0, "videos": 1, "audio": 0}
+
+
 def _run():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
