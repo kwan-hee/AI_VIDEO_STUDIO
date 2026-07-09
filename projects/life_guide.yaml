@@ -1,0 +1,29 @@
+# 생활 정보 안내 영상 프로젝트 설정 (aivs run 용)
+project:
+  name: Life Guide
+  description: 한국 생활 정보 안내 영상
+  output_directory: output/life_guide
+
+providers:
+  image: nano_banana
+  enhance: magnific
+  video: higgsfield
+  tts: edge_tts
+  compose: ffmpeg
+
+voice:
+  speaker: ko-KR-SunHiNeural
+  rate: "-5%"
+
+video:
+  resolution: 1920x1080
+  fps: 30
+  aspect_ratio: "16:9"
+
+timeline:
+  default_transition: none
+  default_duration: 5.0
+
+output:
+  format: mp4
+  overwrite: false
