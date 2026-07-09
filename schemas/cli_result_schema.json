@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CliResult",
+  "description": "AI_VIDEO_STUDIO CLI 명령 결과 계약. cli/aivs_cli.py 의 각 명령이 반환하는 구조화 결과. 실 외부호출/실 ffmpeg 없음(기본 mock).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["command", "status", "exit_code", "summary"],
+  "properties": {
+    "command": { "type": "string", "enum": ["run", "providers", "status"] },
+    "status": {
+      "type": "string",
+      "enum": ["success", "failed", "needs_clarification", "partial", "empty", "ok"]
+    },
+    "exit_code": { "type": "integer", "minimum": 0 },
+    "summary": { "type": "object" }
+  }
+}
