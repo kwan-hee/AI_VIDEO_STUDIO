@@ -14,3 +14,7 @@ output/image/
 # OS
 Thumbs.db
 .DS_Store
+
+# OMC 세션 상태 (추적 제외)
+.omc/
+**/.omc/
