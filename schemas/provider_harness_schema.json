@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProviderHarnessReport",
+  "description": "Provider Test Harness 출력 계약. providers/provider_harness.py run_harness() 반환 형식. 공급자를 SDK 인터페이스로 검증한 결과. 실공급자 호출/미디어 없음.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "passed", "total", "failed", "checks"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Magnific", "Edge TTS", "FFmpeg"]
+    },
+    "passed": { "type": "boolean" },
+    "total": { "type": "integer", "minimum": 0 },
+    "failed": { "type": "integer", "minimum": 0 },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "passed", "detail"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "passed": { "type": "boolean" },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}
