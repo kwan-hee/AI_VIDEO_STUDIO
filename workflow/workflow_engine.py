@@ -23,7 +23,8 @@ import os
 import sys
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-for _sub in ("orchestrator", "planner", "routing", "providers", "assets", "timeline", "composer"):
+for _sub in ("orchestrator", "planner", "routing", "providers", "assets", "timeline",
+             "composer", "reliability", "logging"):
     _p = os.path.join(_ROOT, _sub)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -35,6 +36,8 @@ from provider_sdk import make_request, make_result    # noqa: E402
 from asset_manager import AssetManager                # noqa: E402
 from timeline_builder import build_timeline           # noqa: E402
 from ffmpeg_composer import compose_from_timeline      # noqa: E402
+from retry_manager import run_with_retry               # noqa: E402  (Phase 7-2 신뢰성 배선)
+from execution_logger import ExecutionLogger          # noqa: E402  (Phase 7-2 신뢰성 배선)
 
 import nano_banana_provider                            # noqa: E402
 import higgsfield_provider                             # noqa: E402
@@ -129,24 +132,30 @@ def _cap_dir(output_root, capability):
     return os.path.join(output_root, _CAP_SUBDIR[capability])
 
 
-def run_workflow(request, output_root=None, handlers=None, composer_runner=None, exclude=None):
+def run_workflow(request, output_root=None, handlers=None, composer_runner=None, exclude=None,
+                 logger=None, max_attempts=1):
     """
     요청 하나 → 통제된 워크플로 결과.
-    기획→라우팅→(mock)생성→에셋등록→타임라인→합성. 실 외부호출/실 ffmpeg 없음.
+    기획→라우팅→(Retry Manager로)생성→에셋등록→타임라인→합성. 실 외부호출/실 ffmpeg 없음.
     handlers: 공급자별 핸들러 오버라이드(기본 mock provider).
     exclude: capability 별 제외 공급자(failover 테스트/정책). 예: {"generate_video":["Higgsfield"]}
+    logger: ExecutionLogger 주입(기본 내부 생성). run_start/provider_call/retry/failure/output/run_end 방출.
+    max_attempts: Retry Manager 의 후보별 재시도 횟수(기본 1). failover 는 후보 순회로 처리.
     """
     if not isinstance(request, str) or not request.strip():
         raise ValueError("request 는 비어 있지 않은 문자열이어야 한다.")
 
     handlers = {**DEFAULT_HANDLERS, **(handlers or {})}
     exclude = exclude or {}
+    logger = logger or ExecutionLogger()
+    logger.run_start()
 
     orch = orchestrate(request)
     project = orch["project"]
     prompts = orch["prompts"]
 
     if orch.get("needs_clarification") or project == "unknown":
+        logger.run_end(status="failed", message="needs_clarification/unknown")
         return {
             "request": request, "project": project, "needs_clarification": True,
             "selections": [], "assets": [], "timeline": None, "composition": None,
@@ -163,25 +172,43 @@ def run_workflow(request, output_root=None, handlers=None, composer_runner=None,
         if cap is None:
             continue  # story/script/outline/article/edit: 생성 대상 아님
 
-        sel = route(cap, exclude=exclude.get(cap))
-        provider = sel["selected"]
-        selections.append({"step": name, "capability": cap, "provider": provider})
-        if provider is None:
-            continue
-
-        handler = handlers.get(provider)
-        if handler is None:
+        # 라우팅: 정책 후보(순서) 중 exclude 를 뺀 목록으로 Retry Manager 에 failover 위임
+        sel = route(cap)
+        excluded = set(exclude.get(cap) or [])
+        candidates = [p for p in sel["candidates"] if p not in excluded]
+        if not candidates:
+            selections.append({"step": name, "capability": cap, "provider": None})
+            logger.failure(step=name, message="사용 가능한 공급자 없음")
             continue
 
         text = _resolve_prompt(prompts, step.get("prompt_key")) or f"{project} {name}"
         inputs = [last_image_path] if (cap == "generate_video" and last_image_path) else []
-        req = make_request(provider, cap, prompt=text, inputs=inputs)
 
-        result = handler(req, output_dir=_cap_dir(output_root, cap))
-        if result.get("status") != "success":
+        def _call(provider, attempt, _cap=cap, _text=text, _inputs=inputs):
+            h = handlers.get(provider)
+            if h is None:
+                return {"status": "failed", "message": f"핸들러 없음: {provider}"}
+            req = make_request(provider, _cap, prompt=_text, inputs=_inputs)
+            return h(req, output_dir=_cap_dir(output_root, _cap))
+
+        retry_res = run_with_retry(candidates, _call, max_attempts=max_attempts)
+
+        # 시도별 이벤트: provider_call, 실패 후 다음 시도가 있으면 retry
+        entries = retry_res["log"]
+        for i, e in enumerate(entries):
+            logger.provider_call(step=name, provider=e["provider"], capability=cap,
+                                 status=e["status"], attempt=e["attempt"], message=e["message"])
+            if e["status"] == "failed" and i < len(entries) - 1:
+                logger.retry(provider=e["provider"], attempt=e["attempt"], message="failover/재시도")
+
+        provider = retry_res["selected_provider"]
+        selections.append({"step": name, "capability": cap, "provider": provider})
+
+        if retry_res["status"] != "success":
+            logger.failure(step=name, provider=candidates[0], message="모든 후보 실패")
             continue
 
-        path = result["output"]["path"]
+        path = retry_res["result"]["output"]["path"]
         mgr.register(STEP_ASSET_TYPE[name], provider, path, status="ready")
         if name == "image":
             last_image_path = path
@@ -197,6 +224,11 @@ def run_workflow(request, output_root=None, handlers=None, composer_runner=None,
             timeline, assets, output_dir=final_dir,
             runner=composer_runner or _mock_compose_runner,
         )
+
+    composed_ok = bool(composition and composition.get("status") == "success")
+    if composed_ok:
+        logger.output(output_path=composition.get("output_path"))
+    logger.run_end(status="success" if composed_ok else "failed")
 
     return {
         "request": request,

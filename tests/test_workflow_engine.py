@@ -158,6 +158,72 @@ def test_empty_request_rejected():
         raise AssertionError(f"빈 요청이 거부되지 않음: {bad!r}")
 
 
+# --- Phase 7-2: Retry Manager + Execution Logger 배선 증명 ---
+
+sys.path.insert(0, os.path.join(_ROOT, "logging"))
+from execution_logger import ExecutionLogger  # noqa: E402
+from provider_sdk import make_result  # noqa: E402
+
+
+def test_logger_receives_workflow_events():
+    # (1) 로거가 워크플로 이벤트를 받는다.
+    with tempfile.TemporaryDirectory() as d:
+        lg = ExecutionLogger(run_id="wf_test")
+        run_workflow(MALLI_REQ, output_root=d, composer_runner=_mock_compose_runner, logger=lg)
+        types = [e["event_type"] for e in lg.events()]
+        assert "run_start" == types[0]
+        assert "run_end" == types[-1]
+        assert "provider_call" in types
+        assert "output" in types
+        # provider_call 이벤트는 실제 공급자/단계 정보를 담는다
+        pc = next(e for e in lg.events() if e["event_type"] == "provider_call")
+        assert pc["provider"] in ("Nano Banana", "Higgsfield", "Edge TTS")
+        assert pc["capability"] in ("generate_image", "generate_video", "text_to_speech")
+
+
+def test_retry_manager_invoked_on_provider_failure():
+    # (2) 공급자 실패 시 Retry Manager 가 동작(failover)하고 retry 이벤트가 남는다.
+    def fail_higgs(request, output_dir=None, writer=None):
+        return make_result("Higgsfield", "generate_video", status="failed",
+                           output=None, message="mock 강제 실패")
+    with tempfile.TemporaryDirectory() as d:
+        lg = ExecutionLogger(run_id="wf_retry")
+        r = run_workflow(MALLI_REQ, output_root=d, composer_runner=_mock_compose_runner,
+                         handlers={"Higgsfield": fail_higgs}, logger=lg)
+        by_step = {s["step"]: s for s in r["selections"]}
+        # Higgsfield 실패 → Google Flow 로 failover
+        assert by_step["video"]["provider"] == "Google Flow"
+        # retry 이벤트 방출됨
+        assert any(e["event_type"] == "retry" for e in lg.events())
+        # 영상 에셋은 여전히 등록됨(백업 성공)
+        assert "video" in [a["type"] for a in r["assets"]]
+        _assert_valid(r)
+
+
+def test_malli_mock_pipeline_still_success():
+    # (3) 성공 Malli mock 파이프라인은 여전히 success 를 반환한다.
+    with tempfile.TemporaryDirectory() as d:
+        r = _run(MALLI_REQ, d)
+        assert r["project"] == "malli"
+        assert r["composition"]["status"] == "success"
+        assert sorted(a["type"] for a in r["assets"]) == ["audio", "image", "thumbnail", "video"]
+        _assert_valid(r)
+
+
+def test_output_paths_unchanged():
+    # (4) 기존 출력 경로 스킴이 그대로 유지된다.
+    with tempfile.TemporaryDirectory() as d:
+        r = _run(MALLI_REQ, d)
+        by_type = {a["type"]: a["path"] for a in r["assets"]}
+        assert "images/nano_banana_" in by_type["image"].replace("\\", "/")
+        assert "videos/higgsfield_" in by_type["video"].replace("\\", "/")
+        assert "audio/tts_" in by_type["audio"].replace("\\", "/")
+        assert "images/nano_banana_" in by_type["thumbnail"].replace("\\", "/")
+        # 최종 합성 경로 스킴 유지
+        final = r["composition"]["output_path"].replace("\\", "/")
+        assert "final/malli_timeline_" in final and final.endswith(".mp4")
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
