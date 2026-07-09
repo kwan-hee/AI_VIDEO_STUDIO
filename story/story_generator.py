@@ -70,22 +70,41 @@ def _build_claude_prompt(title, topic, num_scenes):
     )
 
 
+# 실 Claude 모델/토큰 상한
+_CLAUDE_MODEL = "claude-sonnet-5"
+_CLAUDE_MAX_TOKENS = 2000
+
+
 def _default_claude_client():
     """
-    기본 Claude 클라이언트(callable(prompt)->str). 실 백엔드가 구성되지 않았으면 RuntimeError.
-    실 연결 시 여기서 anthropic 기반 callable 을 반환하도록 교체한다.
-    기본은 미연결이라 일반 실행/테스트에서 실 Claude 를 절대 호출하지 않는다.
+    실 anthropic Claude 클라이언트(callable(prompt)->str) 를 만든다.
+    - anthropic 패키지 미설치 → RuntimeError (generate_story 가 status=failed 로 graceful 처리).
+    - ANTHROPIC_API_KEY 환경변수 없음 → RuntimeError (graceful). 키는 절대 하드코딩하지 않는다.
+    반환 callable 은 호출 시에만 실 API 를 부른다(구성 단계에선 호출하지 않음).
     """
     try:
-        import anthropic  # noqa: F401  실 백엔드(선택 설치). 미설치 시 ImportError.
+        import anthropic
     except ImportError as e:
         raise RuntimeError(
             "실 Claude 백엔드가 연결되어 있지 않다. "
             f"({_REAL_ENV}=1 옵트인했으나 anthropic SDK 미설치)"
         ) from e
-    raise RuntimeError(  # pragma: no cover
-        "실 Claude 클라이언트가 구성되지 않았다. claude_client 를 주입하거나 백엔드를 연결하라."
-    )
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY 환경변수가 없다. 실 Claude 호출 불가.")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    def _call(prompt):  # pragma: no cover  (실 API 호출 — 일반 테스트에서 실행하지 않음)
+        resp = client.messages.create(
+            model=_CLAUDE_MODEL,
+            max_tokens=_CLAUDE_MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+
+    return _call
 
 
 def _real_generator(title, topic, num_scenes, client=None):

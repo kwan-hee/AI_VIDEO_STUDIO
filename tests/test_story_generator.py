@@ -87,23 +87,32 @@ def test_injected_generator_invalid_output_fails():
 # --- 실 Claude opt-in: 백엔드 없으면 graceful fail ---
 
 def test_real_param_optin_fails_gracefully():
-    r = generate_story("말리 이야기", real=True)   # 명시 옵트인, 백엔드 미설치
-    assert r["status"] == "failed"
-    assert r["story"] is None
-    assert "실패" in r["message"]
+    # 실 옵트인 + 키 없음 → graceful. (키를 강제 해제해 실 호출 방지)
+    prev = os.environ.pop("ANTHROPIC_API_KEY", None)
+    try:
+        r = generate_story("말리 이야기", real=True)
+        assert r["status"] == "failed"
+        assert r["story"] is None
+        assert "실패" in r["message"]
+    finally:
+        if prev is not None:
+            os.environ["ANTHROPIC_API_KEY"] = prev
 
 
 def test_real_env_flag_respected():
     prev = os.environ.get(_REAL_ENV)
+    prev_key = os.environ.pop("ANTHROPIC_API_KEY", None)   # 실 호출 방지
     os.environ[_REAL_ENV] = "1"
     try:
-        r = generate_story("말리 이야기")   # 환경변수 옵트인 → 실 경로(백엔드 없어 실패)
+        r = generate_story("말리 이야기")   # 환경변수 옵트인 → 실 경로(키 없어 graceful 실패)
         assert r["status"] == "failed"
     finally:
         if prev is None:
             os.environ.pop(_REAL_ENV, None)
         else:
             os.environ[_REAL_ENV] = prev
+        if prev_key is not None:
+            os.environ["ANTHROPIC_API_KEY"] = prev_key
 
 
 def test_env_unset_stays_mock():
@@ -176,10 +185,18 @@ def test_missing_claude_backend_graceful():
     assert r["status"] == "failed"
     assert r["story"] is None
     assert "실패" in r["message"]
-    # 기본 클라이언트(미주입)도 미연결 → graceful fail
-    r2 = generate_story("이야기", real=True)
-    assert r2["status"] == "failed"
-    assert r2["story"] is None
+
+
+def test_missing_api_key_graceful():
+    # 기본 클라이언트 + API 키 없음 → graceful fail. (키를 강제 해제해 실 호출 방지)
+    prev = os.environ.pop("ANTHROPIC_API_KEY", None)
+    try:
+        r = generate_story("이야기", real=True)   # 주입 없음 → 기본 클라이언트, 키 없어 실패
+        assert r["status"] == "failed"
+        assert r["story"] is None
+    finally:
+        if prev is not None:
+            os.environ["ANTHROPIC_API_KEY"] = prev
 
 
 def test_malformed_claude_json_rejected():
