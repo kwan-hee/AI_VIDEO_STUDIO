@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MagnificResult",
+  "description": "Magnific Provider 출력 계약. providers/magnific_provider.py generate() 반환 형식. Provider SDK result 형식을 따르며 output 구조를 이미지 보정/업스케일에 맞게 제약.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "capability", "status", "output", "message"],
+  "properties": {
+    "provider": { "type": "string", "enum": ["Magnific"] },
+    "capability": { "type": "string", "enum": ["enhance_image"] },
+    "status": { "type": "string", "enum": ["success", "failed", "pending"] },
+    "output": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "type", "mock", "source"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "enum": ["image"] },
+            "mock": { "type": "boolean" },
+            "source": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "message": { "type": "string" }
+  }
+}
