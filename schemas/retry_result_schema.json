@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RetryResult",
+  "description": "Retry Manager 출력 계약. reliability/retry_manager.py run_with_retry() 반환 형식. 재시도/failover 실행 결과. 공급자 직접 실행 아님(핸들러 주입).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "selected_provider", "attempts", "max_attempts", "candidates", "log", "result"],
+  "properties": {
+    "status": { "type": "string", "enum": ["success", "failed"] },
+    "selected_provider": { "$ref": "#/definitions/providerOrNull" },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "max_attempts": { "type": "integer", "minimum": 1 },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/provider" }
+    },
+    "log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["attempt", "provider", "status", "delay", "message"],
+        "properties": {
+          "attempt": { "type": "integer", "minimum": 1 },
+          "provider": { "$ref": "#/definitions/provider" },
+          "status": { "type": "string", "enum": ["success", "failed"] },
+          "delay": { "type": "number", "minimum": 0 },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "result": { "type": ["object", "null"] }
+  },
+  "definitions": {
+    "provider": {
+      "type": "string",
+      "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Magnific", "Edge TTS", "FFmpeg"]
+    },
+    "providerOrNull": {
+      "type": ["string", "null"],
+      "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Magnific", "Edge TTS", "FFmpeg", null]
+    }
+  }
+}
