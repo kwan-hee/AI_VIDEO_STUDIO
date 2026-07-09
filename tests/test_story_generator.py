@@ -137,6 +137,69 @@ def test_bad_num_scenes_rejected():
         raise AssertionError(f"잘못된 num_scenes 가 거부되지 않음: {bad}")
 
 
+# --- Phase 7-3: 실 Claude 파이프라인(클라이언트 주입) ---
+
+
+def _valid_claude_client(prompt):
+    """실 Claude 대체: 스키마에 맞는 JSON 텍스트를 반환하는 클라이언트."""
+    return json.dumps({
+        "title": "달토끼",
+        "summary": "달토끼의 모험.",
+        "moral": "용기.",
+        "scenes": [{"scene_number": 1, "narration": "달토끼가 떠난다.",
+                    "image_prompt": "달토끼, 밤하늘", "video_prompt": "달토끼가 뛴다",
+                    "duration": 6.0}],
+    })
+
+
+def test_default_mode_is_mock():
+    # (1) 기본은 mock.
+    r = generate_story("말리 이야기")
+    assert r["status"] == "success"
+    assert r["mock"] is True
+
+
+def test_real_optin_with_injected_client_success():
+    # (2) 명시 real 옵트인 + 주입 Claude 클라이언트 → 실 경로 성공(실 Claude 미호출).
+    r = generate_story("달토끼 이야기", real=True, claude_client=_valid_claude_client)
+    assert r["status"] == "success"
+    assert r["mock"] is False               # 실 경로
+    assert r["story"]["title"] == "달토끼"
+    _assert_valid_story(r["story"])
+
+
+def test_missing_claude_backend_graceful():
+    # (3) Claude 백엔드 미가용(클라이언트가 예외) → graceful fail.
+    def dead_client(prompt):
+        raise RuntimeError("Claude backend down")
+    r = generate_story("이야기", real=True, claude_client=dead_client)
+    assert r["status"] == "failed"
+    assert r["story"] is None
+    assert "실패" in r["message"]
+    # 기본 클라이언트(미주입)도 미연결 → graceful fail
+    r2 = generate_story("이야기", real=True)
+    assert r2["status"] == "failed"
+    assert r2["story"] is None
+
+
+def test_malformed_claude_json_rejected():
+    # (4a) Claude 가 깨진 JSON 반환 → failed.
+    def bad_json(prompt):
+        return "{이건 JSON 이 아님"
+    r = generate_story("이야기", real=True, claude_client=bad_json)
+    assert r["status"] == "failed"
+    assert r["story"] is None
+
+
+def test_malformed_claude_schema_rejected():
+    # (4b) Claude 가 유효 JSON이지만 스키마 위반 → failed.
+    def wrong_schema(prompt):
+        return json.dumps({"title": "T"})   # summary/moral/scenes 누락
+    r = generate_story("이야기", real=True, claude_client=wrong_schema)
+    assert r["status"] == "failed"
+    assert r["story"] is None
+
+
 def _run():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

@@ -58,27 +58,58 @@ def _mock_generator(title, topic, num_scenes):
     }
 
 
-def _real_generator(title, topic, num_scenes):
+def _build_claude_prompt(title, topic, num_scenes):
+    """Claude 에게 스토리 스키마 형식의 JSON 만 반환하도록 지시하는 프롬프트."""
+    return (
+        f"제목 '{title}', 주제 '{topic}' 로 아동용 동화를 만든다.\n"
+        f"장면 {num_scenes}개로 구성한다.\n"
+        "아래 JSON 스키마와 정확히 일치하는 JSON 하나만 출력한다(추가 텍스트 금지).\n"
+        '{"title": str, "summary": str, "moral": str, "scenes": '
+        '[{"scene_number": int, "narration": str, "image_prompt": str, '
+        '"video_prompt": str, "duration": number}]}'
+    )
+
+
+def _default_claude_client():
     """
-    실 Claude 로 구조화 스토리를 생성한다(옵트인 전용).
-    실 백엔드(Claude API/SDK)가 연결되어 있지 않으면 RuntimeError 를 올려
-    generate_story 가 status=failed 로 graceful 처리하게 한다. 준비되면 여기서 호출하도록 교체한다.
+    기본 Claude 클라이언트(callable(prompt)->str). 실 백엔드가 구성되지 않았으면 RuntimeError.
+    실 연결 시 여기서 anthropic 기반 callable 을 반환하도록 교체한다.
+    기본은 미연결이라 일반 실행/테스트에서 실 Claude 를 절대 호출하지 않는다.
     """
     try:
-        import anthropic  # 실 백엔드(선택 설치). 미설치 시 ImportError.
+        import anthropic  # noqa: F401  실 백엔드(선택 설치). 미설치 시 ImportError.
     except ImportError as e:
         raise RuntimeError(
             "실 Claude 백엔드가 연결되어 있지 않다. "
             f"({_REAL_ENV}=1 옵트인했으나 anthropic SDK 미설치)"
         ) from e
-    # pragma: no cover 아래는 실 백엔드 준비 시 구현
-    raise RuntimeError("실 Claude 스토리 생성이 아직 구현되지 않았다.")  # pragma: no cover
+    raise RuntimeError(  # pragma: no cover
+        "실 Claude 클라이언트가 구성되지 않았다. claude_client 를 주입하거나 백엔드를 연결하라."
+    )
 
 
-def generate_story(request, title=None, topic=None, num_scenes=3, real=None, generator=None):
+def _real_generator(title, topic, num_scenes, client=None):
+    """
+    실 Claude 로 구조화 스토리를 생성한다(옵트인 전용).
+    client: callable(prompt)->str (Claude 응답 JSON 텍스트). 미지정 시 기본 클라이언트(미연결→RuntimeError).
+    응답을 JSON 파싱해 스토리 dict 로 반환한다(스키마 검증은 generate_story 가 수행).
+    백엔드 미연결/잘못된 응답은 예외 → generate_story 가 status=failed 로 graceful 처리한다.
+    """
+    client = client or _default_claude_client()
+    prompt = _build_claude_prompt(title, topic, num_scenes)
+    raw = client(prompt)
+    if not isinstance(raw, str):
+        raise ValueError("Claude 응답이 문자열(JSON 텍스트)이 아니다.")
+    return json.loads(raw)  # 잘못된 JSON 은 JSONDecodeError → generate_story 가 failed 처리
+
+
+def generate_story(request, title=None, topic=None, num_scenes=3, real=None, generator=None,
+                   claude_client=None):
     """
     요청/제목/주제 → 구조화 스토리 패키지.
     기본은 mock. 실 Claude 는 옵트인(real=True 또는 CLAUDE_STORY_REAL=1)일 때만 시도, 미가용 시 graceful fail.
+    claude_client: 실 경로에서 쓸 Claude 클라이언트 callable(prompt)->str(JSON). 기본은 미연결.
+    generator 를 직접 주입하면 그것이 최우선이다(테스트/커스텀 백엔드).
     request 오류/잘못된 num_scenes 는 ValueError. 생성/검증 실패는 status="failed".
     """
     if not isinstance(request, str) or not request.strip():
@@ -92,15 +123,15 @@ def generate_story(request, title=None, topic=None, num_scenes=3, real=None, gen
     # 모드 결정: 주입 generator > 실 옵트인 > mock(기본)
     if real is None:
         real = os.environ.get(_REAL_ENV) == "1"
-    if generator is not None:
-        gen, is_mock = generator, False
-    elif real:
-        gen, is_mock = _real_generator, False
-    else:
-        gen, is_mock = _mock_generator, True
+    is_mock = generator is None and not real
 
     try:
-        story = gen(title, topic, num_scenes)
+        if generator is not None:
+            story = generator(title, topic, num_scenes)
+        elif real:
+            story = _real_generator(title, topic, num_scenes, client=claude_client)
+        else:
+            story = _mock_generator(title, topic, num_scenes)
         errs = sorted(_VALIDATOR.iter_errors(story), key=str)
         if errs:
             raise ValueError("스토리 스키마 위반: " + "; ".join(e.message for e in errs))
