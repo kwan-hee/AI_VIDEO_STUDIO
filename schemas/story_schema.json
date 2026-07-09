@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StoryPackage",
+  "description": "Story Generator 산출 계약. story/story_generator.py 가 만드는 구조화 스토리 패키지(제목/요약/교훈/장면). 실행 아님, 대본만.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "summary", "moral", "scenes"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string" },
+    "moral": { "type": "string" },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scene_number", "narration", "image_prompt", "video_prompt", "duration"],
+        "properties": {
+          "scene_number": { "type": "integer", "minimum": 1 },
+          "narration": { "type": "string", "minLength": 1 },
+          "image_prompt": { "type": "string", "minLength": 1 },
+          "video_prompt": { "type": "string", "minLength": 1 },
+          "duration": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    }
+  }
+}
