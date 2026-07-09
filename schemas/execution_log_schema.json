@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecutionLogEvent",
+  "description": "Execution Logger 이벤트 계약. logging/execution_logger.py 가 남기는 단일 구조화 로그 이벤트. 실행 아님, 기록만.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "seq", "timestamp", "event_type"],
+  "properties": {
+    "run_id": { "type": "string", "minLength": 1 },
+    "seq": { "type": "integer", "minimum": 1 },
+    "timestamp": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "type": "string",
+      "enum": ["run_start", "run_end", "provider_call", "retry", "failure", "output"]
+    },
+    "step": { "type": "string" },
+    "provider": {
+      "type": "string",
+      "enum": ["Nano Banana", "Google Flow", "Higgsfield", "Magnific", "Edge TTS", "FFmpeg"]
+    },
+    "capability": {
+      "type": "string",
+      "enum": ["generate_image", "generate_video", "enhance_image", "text_to_speech", "compose"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["started", "success", "failed", "pending"]
+    },
+    "attempt": { "type": "integer", "minimum": 0 },
+    "output_path": { "type": ["string", "null"] },
+    "message": { "type": "string" }
+  }
+}
