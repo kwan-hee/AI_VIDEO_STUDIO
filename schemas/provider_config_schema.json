@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProviderConfig",
+  "description": "Provider Configuration 계약. config/provider_config.py 가 로드/검증하는 설정 형식. 공급자 모드(mock/real/disabled/local)와 라우팅 정책. 실행 아님, 설정만.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["providers", "routing"],
+  "properties": {
+    "providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nano_banana": { "$ref": "#/definitions/providerEntry" },
+        "magnific": { "$ref": "#/definitions/providerEntry" },
+        "higgsfield": { "$ref": "#/definitions/providerEntry" },
+        "google_flow": { "$ref": "#/definitions/providerEntry" },
+        "edge_tts": { "$ref": "#/definitions/providerEntry" },
+        "ffmpeg": { "$ref": "#/definitions/providerEntry" }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generate_image": { "$ref": "#/definitions/routeEntry" },
+        "enhance_image": { "$ref": "#/definitions/routeEntry" },
+        "generate_video": { "$ref": "#/definitions/routeEntry" },
+        "text_to_speech": { "$ref": "#/definitions/routeEntry" },
+        "compose": { "$ref": "#/definitions/routeEntry" }
+      }
+    }
+  },
+  "definitions": {
+    "providerKey": {
+      "type": "string",
+      "enum": ["nano_banana", "magnific", "higgsfield", "google_flow", "edge_tts", "ffmpeg"]
+    },
+    "providerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["mock", "real", "disabled", "local"] }
+      }
+    },
+    "routeEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary"],
+      "properties": {
+        "primary": { "$ref": "#/definitions/providerKey" },
+        "backup": { "$ref": "#/definitions/providerKey" }
+      }
+    }
+  }
+}
