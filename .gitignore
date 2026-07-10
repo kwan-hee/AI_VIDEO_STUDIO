@@ -45,3 +45,6 @@ dist/
 # OMC 세션 상태 (추적 제외)
 .omc/
 **/.omc/
+
+# Secrets
+secrets/
