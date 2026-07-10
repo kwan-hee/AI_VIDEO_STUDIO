@@ -1,4 +1,4 @@
-# Provider SDK request 를 받아 이미지를 생성(현재는 안전 mock)하고 SDK result 를 반환하는 Nano Banana Provider
+# Provider SDK request 를 받아 이미지를 생성(기본 mock, 실 백엔드 옵트인)하고 SDK result 를 반환하는 Nano Banana Provider
 """
 Nano Banana Provider (Phase 3 / Provider 1)
 
@@ -11,13 +11,18 @@ Nano Banana Provider (Phase 3 / Provider 1)
   - 표준 Provider SDK result 를 반환한다.
   - 생성/모의 이미지를 output/images/ 아래에 저장한다.
 
-현재 실 Nano Banana 실행은 미가용 → 안전 mock 을 먼저 구현한다.
-실 실행이 준비되면 writer 인자로 실제 생성 백엔드를 주입한다(기본은 mock writer).
+기본은 mock 이다. 실 실행은 옵트인 전용이다(real=True 또는 환경변수 NANO_BANANA_REAL=1).
+실 백엔드는 _real_writer() 뒤에만 구현한다(Google Gemini 이미지 모델, "Nano Banana").
+  - API 키는 환경변수(GEMINI_API_KEY 또는 GOOGLE_API_KEY)에서 읽는다. 하드코딩 금지.
+  - 모델명은 환경변수 NANO_BANANA_MODEL 로 설정한다. 미설정 시 안정 기본값.
+SDK 미설치/키 없음 → RuntimeError → generate 가 status=failed 로 graceful 처리한다.
+writer 를 직접 주입하면 그 writer 가 최우선이다(테스트/커스텀 백엔드).
 
 다른 공급자(영상/음성/보정/합성)는 호출하지 않는다. Sprint 1~13 미수정.
 결과 스키마: schemas/nano_banana_result_schema.json (Provider SDK result 형식 준수)
 """
 
+import base64
 import hashlib
 import os
 
@@ -35,6 +40,14 @@ _MOCK_BYTES = b"\x89PNG\r\n\x1a\nnano-banana-mock"
 # 실 실행 옵트인 환경변수. "1" 일 때만 실 백엔드를 시도한다(기본은 mock).
 _REAL_ENV = "NANO_BANANA_REAL"
 
+# 실 이미지 모델은 환경변수 NANO_BANANA_MODEL 로 설정한다. 미설정 시 안정 기본값.
+# 미래 모델명은 하드코딩하지 않는다(설치 SDK 가 지원하지 않는 이름은 런타임 오류가 되므로).
+_MODEL_ENV = "NANO_BANANA_MODEL"
+_DEFAULT_MODEL = "gemini-2.5-flash-image"
+
+# API 키 환경변수 후보(google-genai 표준). 키는 절대 하드코딩하지 않는다.
+_API_KEY_ENVS = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
+
 
 def _mock_writer(path, prompt):
     """실 공급자 없이 placeholder 이미지 파일을 기록한다."""
@@ -42,20 +55,60 @@ def _mock_writer(path, prompt):
         f.write(_MOCK_BYTES)
 
 
+def _resolve_model():
+    """실 이미지 모델명을 결정한다. NANO_BANANA_MODEL 우선, 없으면 안정 기본값."""
+    return os.environ.get(_MODEL_ENV) or _DEFAULT_MODEL
+
+
+def _resolve_api_key():
+    """환경변수에서 API 키를 읽는다. 없으면 None."""
+    for env in _API_KEY_ENVS:
+        v = os.environ.get(env)
+        if v:
+            return v
+    return None
+
+
+def _extract_image_bytes(resp):
+    """Gemini 응답에서 첫 이미지 바이트를 추출한다(bytes 또는 base64 문자열 모두 처리)."""
+    for cand in getattr(resp, "candidates", None) or []:
+        content = getattr(cand, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            inline = getattr(part, "inline_data", None)
+            data = getattr(inline, "data", None) if inline else None
+            if data:
+                return base64.b64decode(data) if isinstance(data, str) else data
+    raise RuntimeError("Gemini 응답에 이미지 데이터가 없다.")
+
+
 def _real_writer(path, prompt):
     """
     실 이미지 생성 백엔드로 파일을 기록한다(옵트인 전용).
-    실 백엔드가 연결되어 있지 않으면 RuntimeError 를 올려 generate 가 status=failed 로 보고하게 한다.
-    실 SDK 가 준비되면 여기서 호출하도록 교체한다.
+    Google Gemini 이미지 모델("Nano Banana")을 호출한다.
+    - google-genai SDK 미설치 → RuntimeError.
+    - API 키 환경변수 없음 → RuntimeError.
+    반환 이미지를 디코드해 PNG 로 저장한다.
+    실 백엔드 미가용은 RuntimeError → generate 가 status=failed 로 graceful 처리한다.
     """
     try:
-        import nano_banana_sdk  # 실 백엔드(선택 설치). 미설치 시 ImportError.
+        from google import genai
     except ImportError as e:
         raise RuntimeError(
             "실 Nano Banana 백엔드가 연결되어 있지 않다. "
-            f"({_REAL_ENV}=1 옵트인했으나 SDK 미설치)"
+            f"({_REAL_ENV}=1 옵트인했으나 google-genai SDK 미설치)"
         ) from e
-    nano_banana_sdk.generate_image(prompt=prompt, out_path=path)  # pragma: no cover
+
+    api_key = _resolve_api_key()
+    if not api_key:
+        raise RuntimeError(
+            f"API 키 환경변수가 없다({' 또는 '.join(_API_KEY_ENVS)}). 실 이미지 생성 불가."
+        )
+
+    client = genai.Client(api_key=api_key)  # pragma: no cover  (실 API — 일반 테스트 미실행)
+    resp = client.models.generate_content(model=_resolve_model(), contents=prompt)
+    data = _extract_image_bytes(resp)
+    with open(path, "wb") as f:
+        f.write(data)
 
 
 def _rel(path):
