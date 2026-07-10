@@ -70,9 +70,17 @@ def _build_claude_prompt(title, topic, num_scenes):
     )
 
 
-# 실 Claude 모델/토큰 상한
-_CLAUDE_MODEL = "claude-sonnet-5"
+# 실 Claude 모델/토큰 상한.
+# 모델은 환경변수 ANTHROPIC_MODEL 로 설정한다. 미설정 시 안정 기본값을 쓴다.
+# 미래 모델명은 하드코딩하지 않는다(설치된 SDK 가 지원하지 않는 이름은 런타임 오류가 되므로).
+_DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-6"
+_CLAUDE_MODEL_ENV = "ANTHROPIC_MODEL"
 _CLAUDE_MAX_TOKENS = 2000
+
+
+def _resolve_claude_model():
+    """실 Claude 모델명을 결정한다. ANTHROPIC_MODEL 우선, 없으면 안정 기본값."""
+    return os.environ.get(_CLAUDE_MODEL_ENV) or _DEFAULT_CLAUDE_MODEL
 
 
 def _default_claude_client():
@@ -98,7 +106,7 @@ def _default_claude_client():
 
     def _call(prompt):  # pragma: no cover  (실 API 호출 — 일반 테스트에서 실행하지 않음)
         resp = client.messages.create(
-            model=_CLAUDE_MODEL,
+            model=_resolve_claude_model(),
             max_tokens=_CLAUDE_MAX_TOKENS,
             messages=[{"role": "user", "content": prompt}],
         )
