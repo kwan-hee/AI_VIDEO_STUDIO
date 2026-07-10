@@ -1,0 +1,8 @@
+anthropic
+google-genai
+google-api-python-client
+google-auth-oauthlib
+edge-tts
+ffmpeg-python
+python-dotenv
+pytest
