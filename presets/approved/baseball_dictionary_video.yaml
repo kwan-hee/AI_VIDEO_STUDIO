@@ -1,0 +1,39 @@
+# 야구백과사전 영상 승인 프리셋 (동결). 계정/자격증명 정보 없음.
+# status 가 approved 여야 프로덕션에서 동결·재사용된다. 변경은 명시적 override 필요.
+preset:
+  status: approved
+  name: baseball_dictionary_video
+  project_type: baseball_dictionary
+  version: 1
+
+  # --- provider 실 파라미터 (Higgsfield MCP generate_video 지원 필드) ---
+  provider: higgsfield
+  model: seedance_2_0
+  resolution: 1080p
+  aspect_ratio: "16:9"
+  duration: 8
+  fps: 30
+  mode: std
+  bitrate_mode: standard
+  generate_audio: false
+  output_format: mp4
+
+  # --- 참조/일관성·창작 의도 ---
+  reference_image: start_image
+  character_consistency: moderate      # 실존 선수 얼굴 금지, 동작·장비 정확성 우선
+  camera_motion: educational_stable    # 교육용 안정 앵글, 과한 시네마틱 배제
+  motion_style: replay_slow_motion     # 리플레이/슬로모 지원 시
+  motion_strength: medium
+  seed_behavior: fixed_per_scene
+  quality_level: high
+  negative_prompt:
+    - extra limbs
+    - warped bat
+    - warped glove
+    - deformed ball
+    - distorted uniform
+    - unrealistic body mechanics
+    - motion blur that hides the ball
+    - flicker
+    - text
+    - watermark

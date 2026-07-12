@@ -27,7 +27,7 @@ End-to-End AI Video Production Platform
 ![Edge TTS](https://img.shields.io/badge/Edge-TTS-0078D4?logo=microsoftedge&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-H.264%2FAAC-007808?logo=ffmpeg&logoColor=white)
 ![YouTube Upload](https://img.shields.io/badge/YouTube-Upload-FF0000?logo=youtube&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-403_passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-439_passed-brightgreen)
 ![License](https://img.shields.io/badge/license-Private-lightgrey)
 </p>
 
@@ -39,6 +39,7 @@ End-to-End AI Video Production Platform
 - Installation
 - Configuration
 - Environment Variables
+- Cost-Saving Hybrid Mode
 - Project Structure
 - Pipeline
 - Security
@@ -116,6 +117,7 @@ AI를 활용하여 **동화 스토리 생성 → 이미지 생성 → 영상 생
 - 🗣️ **AI Voice Generation** — Microsoft Edge TTS 한국어 내레이션
 - 🎬 **FFmpeg Composition** — 영상 + 음성 합성(H.264 + AAC, faststart)
 - 🎬 **Multi-scene Pipeline** — 전체 씬을 순서대로 자동 처리
+- 💸 **Cost-Saving Hybrid Mode** — 에피소드당 AI 영상 1클립 + 나머지 FFmpeg 모션
 - 📤 **Automatic YouTube Upload** — YouTube Data API v3 업로드
 - 🔀 **Mock / Real Mode** — 기본 mock, 실 실행은 명시 옵트인
 - ⏯️ **Resume Support** — 이미 유효한 산출물은 건너뛰고 이어서 진행
@@ -298,6 +300,90 @@ YOUTUBE_REAL=1
 
 ---
 
+# 💸 Cost-Saving Hybrid Mode
+
+AI 영상 생성 크레딧 사용량을 줄이는 제작 모드입니다.
+
+- **hybrid_economy** — 에피소드당 프리미엄 씬 **1개만** Higgsfield(Seedance) AI 영상으로 생성하고,
+  나머지 씬은 Gemini 이미지 + **FFmpeg 모션**(Ken Burns / zoom / pan / fade)으로 채웁니다.
+- **image_only** — AI 영상 생성 **0회**. 전 씬을 FFmpeg 모션으로 처리합니다.
+- 나레이션은 기존 Edge TTS, 합성은 기존 FFmpeg Composer 를 그대로 사용합니다.
+- **자동 폴백** — Seedance 생성이 재시도 후에도 실패하면 해당 씬을 FFmpeg 모션으로 대체하고
+  에피소드를 `completed_with_fallback` 상태로 계속 진행합니다(추가 AI 영상 크레딧 소모 없음).
+- **재개(Resume)** — 이미 유효한 이미지·클립은 재생성하지 않으며, 프리미엄 씬 선택은
+  `{output}/hybrid_state.json` 에 고정되어 재실행 시에도 바뀌지 않습니다.
+- 사용량 요약은 **호출 횟수만** 보고합니다. 공급자 크레딧 단가는 변동될 수 있으므로
+  고정 크레딧 값을 가정하지 않습니다(공식 사용량은 공급자 API 조회 기준).
+
+### 설정 (YAML)
+
+```yaml
+production:
+  mode: hybrid_economy          # full_video(기본) | hybrid_economy | image_only | mock
+
+cost_control:
+  max_ai_video_clips: 1         # 에피소드당 AI 영상 상한
+  premium_scene_strategy: auto  # auto | first | middle | climax | manual
+  preferred_scene_index: null   # manual 전략에서 사용할 씬 번호(1-base)
+  allow_video_fallback_to_image: true
+
+image_motion:
+  enabled: true
+  default_effect: ken_burns
+  alternate_effects: [zoom_in, zoom_out, pan_left, pan_right, slow_push]
+  zoom_start: 1.0
+  zoom_end: 1.12
+  fps: 30
+  resolution: 1920x1080
+  crossfade_seconds: 0.5
+
+video_generation:
+  provider: higgsfield
+  model: seedance
+  max_clips_per_episode: 1
+```
+
+새 섹션은 전부 선택 사항입니다. 기존 프로젝트 설정 파일은 **수정 없이** 그대로 동작합니다
+(부재 시 안전 기본값, 기본 모드는 `full_video` = 기존 동작).
+
+### CLI
+
+```bash
+# hybrid_economy 로 말리 프로젝트 실행 (CLI 옵션이 YAML 을 덮어씀)
+python cli/aivs_cli.py run projects/malli.yaml --mode hybrid_economy
+
+# AI 영상 상한 / 프리미엄 씬 전략 / 씬 직접 지정
+python cli/aivs_cli.py run projects/malli.yaml --mode hybrid_economy --max-ai-video-clips 1
+python cli/aivs_cli.py run projects/malli.yaml --mode hybrid_economy --premium-scene auto
+python cli/aivs_cli.py run projects/malli.yaml --mode hybrid_economy --premium-scene-index 3
+
+# AI 영상 크레딧 0 으로 전체 제작
+python cli/aivs_cli.py run projects/malli.yaml --mode image_only
+```
+
+실행 로그 예시.
+
+```
+[Cost Control] Mode: hybrid_economy
+[Cost Control] AI video clip limit: 1
+[Cost Control] Selected premium scene: 3
+[Cost Control] Remaining scenes use FFmpeg image motion
+
+Production summary
+------------------
+Mode: hybrid_economy
+Total scenes: 6
+Image generations: 6
+AI video generations requested: 1
+AI video generations completed: 1
+FFmpeg motion scenes: 5
+AI video retries: 0
+Fallback scenes: 0
+YouTube upload: enabled
+```
+
+---
+
 # 🔐 OAuth 설정 방법
 
 ## 1.
@@ -380,7 +466,8 @@ AI_VIDEO_STUDIO
 ├── providers/          # Nano Banana(이미지) / Higgsfield(영상) 공급자
 ├── executors/          # Edge TTS 실행기
 ├── composer/           # FFmpeg 합성 + 최종 영화 합성기
-├── pipeline/           # 멀티씬 제작 파이프라인
+├── motion/             # 정지 이미지 → FFmpeg 모션 클립 (hybrid mode)
+├── pipeline/           # 멀티씬 제작 파이프라인 + hybrid 모드 파이프라인
 ├── uploader/           # YouTube 업로더
 ├── config/             # 프로젝트/공급자 설정
 ├── schemas/            # JSON 스키마
@@ -472,8 +559,66 @@ pytest
 현재 기준
 
 ```
-403 passed
+439 passed
 ```
+
+---
+
+# 🔁 Dual-Account Higgsfield Production
+
+두 Higgsfield 계정을 alias 로만 다뤄 크레딧을 효율적으로 쓰면서 영상 품질을 높이는 워크플로.
+
+- **legacy_account** — 최소 품질검증 + 초기 프로덕션에 사용. 남은 크레딧을 버리지 않고 실제 제작에 계속 쓴다.
+- **production_account** — legacy 가 다음 생성 비용을 감당 못할 때만 자동 활성화. 승인·동결된 프리셋만 재사용.
+- **승인 프리셋 동결** — 검증 통과한 style/character/camera/motion 설정을 `presets/approved/*.yaml` 로 동결. 프로덕션은 이 프리셋만 재사용하고, 변경은 명시적 override 필요.
+- **자동 전환 조건** — 오직 확인된 크레딧 조건(사전 잔액 부족 또는 명시적 부족 오류)에서만. 실행당 **최대 1회**, 전환 후 legacy 로 되돌아가지 않는다.
+- **전환하지 않는 경우** — 인증/권한 실패, 잘못된 프롬프트/설정, 모호한 타임아웃, 네트워크 오류.
+- **중복 유료 생성 방지** — 재시도 전 provider job 상태를 확인하고 완료 자산/캐시를 재사용. 모호한 타임아웃 뒤에는 같은 장면을 재제출하지 않는다.
+- **resume** — 완료된 클립/이미지/프리셋을 재사용하고, 페일오버 후 활성 계정을 보존한다(재개 시 legacy 회귀 없음).
+- **자격증명은 리포 밖** — 이메일/OAuth 토큰/쿠키/API 키는 코드·YAML·로그·매니페스트·테스트에 절대 넣지 않는다. alias(`legacy_account`/`production_account`)만 등장한다.
+
+## 구성 (alias 만, 자격증명 없음)
+
+예시: `config/higgsfield_accounts.example.yaml` 참조. 실제 값은 alias·서버명·추정치뿐이며 계정 이메일을 넣지 않는다.
+`starting_credit_estimate` 는 참고값이며 provider 잔액 데이터가 있으면 그것이 우선한다(추정치를 공식 잔액으로 취급하지 않는다).
+
+## 설정 순서 (PowerShell)
+
+```powershell
+# 1) 두 Higgsfield MCP 서버를 서로 다른 이름으로, 각각 다른 계정으로 등록한다(자격증명은 노출하지 않는다).
+#    두 번째 계정을 연결할 때 첫 계정 인증을 덮어쓰지 않도록 주의한다.
+claude mcp list        # higgsfield_legacy 와 higgsfield_production 이 각각 보이는지 확인
+
+# 2) 승인 프리셋 확인(무과금)
+python cli/aivs_cli.py run projects/malli.yaml --quality-validation --preset malli_video
+```
+
+## 명령 (PowerShell)
+
+```powershell
+# 말리 품질검증 (무과금 — 검증 계획 출력)
+python cli/aivs_cli.py run projects/malli.yaml --quality-validation --higgsfield-account legacy
+
+# 야구백과 품질검증
+python cli/aivs_cli.py run projects/baseball_dictionary.yaml --quality-validation --higgsfield-account legacy
+
+# 말리 프로덕션 (자동 페일오버 + 재개)
+python cli/aivs_cli.py run projects/malli.yaml --preset malli_video --higgsfield-account auto --resume
+
+# 야구백과 프로덕션 (자동 페일오버 + 재개)
+python cli/aivs_cli.py run projects/baseball_dictionary.yaml --preset baseball_dictionary_video --higgsfield-account auto --resume
+```
+
+> ⚠️ 라이브 자동 전환은 `higgsfield_legacy` 와 `higgsfield_production` 두 MCP 서버가 **각각 별도 계정으로 인증·등록**되어 신원이 확인되기 전까지 동작하지 않는다. 그 전에는 위 옵션이 무과금 안전 동작(프리셋 로드·검증 계획·계정 의도 로깅)만 수행한다. 현재 환경에는 `claude.ai Higgsfield` 단일 커넥터만 등록돼 있어 두 계정 동시 독립 인증이 **검증되지 않았다**.
+
+## Troubleshooting
+
+- **두 MCP alias 가 같은 계정으로 해석됨** — `higgsfield_legacy`·`higgsfield_production` 이 같은 OAuth 세션을 공유하면 동일 계정이 된다. 각 서버를 별도 Claude Code 프로필 또는 별도 MCP 래퍼 프로세스로 분리해 각기 다른 계정으로 인증하라. 등록 후 각 서버의 `balance` 값이 서로 다른지로 교차 확인한다(계정 신원은 로그로 남기지 않는다).
+- **OAuth 세션 덮어쓰기** — 두 번째 계정 연결 시 첫 계정 인증이 덮여쓰이면 동시 이중 인증이 불가하다는 신호다. 프로필/래퍼 분리로 격리하라.
+- **잔액 조회 없음** — provider balance 도구가 없으면 로컬 사용 원장 + `fallback_generation_limit` + 안전마진으로 판단하고, 명시적 부족 오류에도 전환한다. 이때 요약은 "estimate only" 로 표기되며 공식 잔액으로 위장하지 않는다.
+- **모호한 타임아웃** — 원 job 상태를 먼저 확인한다. 완료면 재사용, 부족이면 전환, 불확실이면 멈춘다. 절대 곧바로 재제출하지 않는다(중복 과금 방지).
+- **크레딧 오차감** — 요약에서 provider-reported 와 estimated 를 명확히 구분한다. 추정치는 절대 공식 잔액이 아니다.
+- **계정 전환 후 재개** — 매니페스트의 `higgsfield_state.active_account` 가 보존되어 재개 시 legacy 로 되돌아가지 않는다.
 
 ---
 

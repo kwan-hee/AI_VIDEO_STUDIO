@@ -1,0 +1,33 @@
+# Higgsfield 이중계정 페일오버 설정 예시 (alias 만; 계정 이메일/자격증명 절대 포함 금지).
+# 이 파일은 "예시" 다. 실제 라이브 전환은 higgsfield_legacy / higgsfield_production 두 MCP 서버가
+# 각각 별도 계정으로 인증·등록되어야 동작한다(README 의 Dual-Account 섹션·Troubleshooting 참조).
+# starting_credit_estimate 는 참고값일 뿐이며 provider 잔액 데이터가 있으면 그것이 우선(권위 아님).
+higgsfield_accounts:
+  active_policy: automatic_failover
+
+  primary:
+    alias: legacy_account
+    mcp_server: higgsfield_legacy
+    starting_credit_estimate: 823        # 참고용 추정치(권위 아님)
+    fallback_generation_limit: 11        # 잔액 도구가 없을 때만 사용하는 성공생성 상한
+
+  backup:
+    alias: production_account
+    mcp_server: higgsfield_production
+    starting_credit_estimate: 6000       # 참고용 추정치(권위 아님)
+
+  failover:
+    enabled: true
+    prefer_provider_balance: true                 # provider 잔액 우선
+    switch_before_insufficient_balance: true      # 다음 요청 비용+마진 감당 못하면 사전 전환
+    switch_on_explicit_insufficient_credits: true # 명시적 부족 오류 시 전환
+    switch_on_auth_error: false                   # 인증 오류로는 전환 안 함
+    switch_on_timeout: false                      # 타임아웃으로는 전환 안 함
+    maximum_switches_per_run: 1                    # 실행당 1회
+    persist_active_account: true                   # 활성 계정을 매니페스트에 저장(resume)
+    safety_margin_credits: 100                     # 다음 요청 전 여유 크레딧
+    retry_request_after_confirmed_credit_failure: true
+
+  # 모델별 크레딧 추정(하드코딩 금지 원칙: provider 견적이 있으면 그게 우선).
+  model_costs:
+    seedance_2_0: 80

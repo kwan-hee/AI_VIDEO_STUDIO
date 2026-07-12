@@ -1,0 +1,39 @@
+# 말리 동화 영상 승인 프리셋 (동결). 계정/자격증명 정보 없음.
+# status 가 approved 여야 프로덕션에서 동결·재사용된다. 변경은 명시적 override 필요.
+preset:
+  status: approved
+  name: malli_video
+  project_type: malli
+  version: 1
+
+  # --- provider 실 파라미터 (Higgsfield MCP generate_video 지원 필드) ---
+  provider: higgsfield
+  model: seedance_2_0          # 실 파이프라인이 쓰는 image-to-video 모델
+  resolution: 1080p            # Higgsfield: 480p/720p/1080p/4k (1080p 는 mode std)
+  aspect_ratio: "16:9"
+  duration: 8                  # 초
+  fps: 30
+  mode: std                    # std=고품질(1080p 지원), fast=저해상
+  bitrate_mode: standard
+  generate_audio: false        # 나레이션 별도 → 네이티브 오디오 불필요
+  output_format: mp4
+
+  # --- 참조/일관성·창작 의도 (프롬프트·모델선택에 반영되는 상위 개념) ---
+  reference_image: start_image        # medias role (캐릭터 시트/씬 이미지)
+  character_consistency: strict       # 말리 정체성 고정
+  camera_motion: gentle_cinematic
+  motion_style: slow_cinematic
+  motion_strength: medium
+  seed_behavior: fixed_per_scene      # 씬별 고정(재현성)
+  quality_level: high
+  negative_prompt:
+    - face distortion
+    - identity drift
+    - extra fingers
+    - extra limbs
+    - deformed hands
+    - flicker
+    - sudden camera shake
+    - sudden zoom
+    - text
+    - watermark
