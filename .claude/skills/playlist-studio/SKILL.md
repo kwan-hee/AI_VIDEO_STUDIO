@@ -289,8 +289,20 @@ python -m playlist_studio align --project <프로젝트> --method auto
 잘못 들었어도 화면에는 원문 "조용히 앉아 있어"가 나가고, 타이밍만 가져온다.
 인식 못 한 줄은 앞뒤 사이에 보간하고 `interpolated` 로 표시한다.
 
-Abocado STT 를 쓰려면 `abocado_transcribe_audio` 를 `transcript_format:"srt"` 로 호출해
-곡별 SRT 를 `01.srt`, `02.srt` … 로 저장한 뒤 `--method srt --srt-dir <폴더>`.
+Abocado STT 로 SRT 를 얻으려면 (⚠️ **유료 — 오디오 길이 기준 분당 과금, 최소 1분.
+곡 수만큼 반복되므로 승인 게이트를 먼저 거친다**):
+
+1. `abocado_check_cost` 에 같은 `audio_url` 을 넣어 견적 → 잔액과 함께 승인받기
+2. `abocado_transcribe_audio` 호출
+   - `model`: `se-speech-to-text-scribe-v2-a2t`
+   - `audio_url`: 곡의 CDN URL (Abocado 생성 결과 URL 그대로 쓸 수 있다)
+   - `options`: `{"language_code": "ko"}` (미지정 시 자동 감지)
+3. `abocado_get_job_status` 를 `transcript_format: "srt"` 로 호출해 SRT 텍스트 회수
+   (또는 `abocado_wait_for_job` 으로 완료를 기다린 뒤 조회)
+4. 곡별로 `01.srt`, `02.srt` … 로 저장한 뒤:
+   `python -m playlist_studio align --project <프로젝트> --method srt --srt-dir <폴더>`
+
+faster-whisper 가 설치되어 있으면 무료이고 결과도 충분하므로 그쪽을 먼저 권한다.
 
 ### 7-3. 자막 생성
 

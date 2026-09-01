@@ -31,7 +31,7 @@ description: AI 플레이리스트 영상 한 편을 처음부터 끝까지 만�
 | **이미지 생성** | `abocado_generate_image` | **유료.** 기본 모델 `se-gpt-image-2-t2i` |
 | 결과 대기·URL 확보 | `abocado_wait_for_job` | 무료 |
 | 작업 상태 1회 조회 | `abocado_get_job_status` | 무료 |
-| 음성→텍스트(정렬용, 선택) | `abocado_transcribe_audio` | 유료. `transcript_format:"srt"` 로 SRT 회수 |
+| 음성→텍스트(정렬용, 선택) | `abocado_transcribe_audio` | **유료(분당·최소 1분).** 모델 `se-speech-to-text-scribe-v2-a2t`, 인자는 `audio_url`. 결과 SRT 는 `abocado_get_job_status(job_key, transcript_format:"srt")` 로 회수 |
 
 뮤직 모델(2026-09 조회 시점 단가 — **매번 재조회할 것**):
 
