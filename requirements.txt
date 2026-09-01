@@ -1,0 +1,10 @@
+# playlist_studio 필수
+PyYAML>=6.0
+Pillow>=10.0
+
+# 권장 (없어도 동작하지만 기능이 떨어진다)
+fonttools>=4.40        # 폰트가 해당 언어 글자를 실제로 갖고 있는지 정확히 판정
+faster-whisper>=1.0    # 가사 싱크. 없으면 추정 배분(300ms 미보장)으로 폴백
+
+# 테스트
+pytest>=8.0

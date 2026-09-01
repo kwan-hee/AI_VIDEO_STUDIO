@@ -8,4 +8,19 @@ AI 영상 제작 자동화 R&D 프로젝트.
 
 ## 시작하기
 
+## AI 플레이리스트 자동 제작
+
+Claude Code(오케스트레이터) + Abocado AI MCP(생성) + Python·FFmpeg(가공)로
+플레이리스트 영상 한 편을 처음부터 끝까지 만든다.
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python -m playlist_studio doctor      # 환경 검사
+.venv/bin/python -m playlist_studio selftest    # 전 과정 검증 (크레딧 0)
+```
+
+Claude Code 안에서는 `/playlist-builder` 로 시작한다.
+
+자세한 내용: [docs/50_PLAYLIST_AUTOMATION.md](docs/50_PLAYLIST_AUTOMATION.md)
+
 ## 참고 문서

@@ -18,3 +18,14 @@ Thumbs.db
 # OMC 세션 상태 (추적 제외)
 .omc/
 **/.omc/
+
+# playlist_studio 산출물 (미디어 · 대용량 · 재생성 가능)
+studio/**/audio/
+studio/**/images/
+studio/**/video/
+studio/**/work/
+studio/**/*.mp3
+studio/**/*.wav
+studio/**/*.mp4
+studio/**/*.png
+studio/**/*.jpg
