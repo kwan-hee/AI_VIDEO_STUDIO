@@ -54,6 +54,72 @@ python -m playlist_studio selftest --tracks 3 --seconds 30
 /playlist-builder
 ```
 
+## 웹 대시보드 (핸드폰·태블릿·다른 PC)
+
+터미널을 열지 않고 브라우저 하나로 전 과정을 조종한다.
+
+```bash
+python -m playlist_studio serve
+```
+
+Windows 는 `대시보드_실행.bat` 를 두 번 클릭해도 된다.
+실행하면 터미널에 두 개의 주소가 뜬다.
+
+```
+이 PC에서       http://127.0.0.1:8765/?t=xxxxxxxx
+같은 Wi-Fi 기기  http://192.168.0.12:8765/?t=xxxxxxxx   ← 핸드폰에 이 주소를 입력
+```
+
+주소 끝의 `?t=...` 는 접속 열쇠다. **이게 없으면 아무 API 도 응답하지 않는다.**
+한 번 접속하면 브라우저가 기억하므로 다음부터는 주소만 넣어도 된다.
+iPhone·Android 모두 "홈 화면에 추가" 하면 앱처럼 열린다.
+
+### 화면 구성
+
+| 화면 | 하는 일 |
+|---|---|
+| 홈 | 환경 상태, 플레이리스트 목록과 진행률, 새로 만들기, 전체 점검 |
+| 설정 | 마법사 질문을 **한 번에 하나씩** 큰 버튼으로 |
+| 단계 | 9단계 진행표 + "다음 할 일" 카드 + 단계별 실행 버튼 |
+| 곡 | 곡 목록, 그 자리에서 재생, 제목·주제·가사 편집 |
+| 결과물 | 최종 영상 재생, 썸네일 미리보기, 유튜브 제목·설명·챕터·태그 복사 |
+| QA | 검사 결과, 확인이 필요한 항목만 먼저 |
+
+### 무엇이 되고 무엇이 안 되는가
+
+- **서버는 CLI 만 실행한다.** MCP 를 부르지 않으므로 이 화면을 아무리 눌러도
+  **크레딧이 소모되지 않는다.**
+- 실행 가능한 명령은 CLI 하위 명령으로 화이트리스트가 걸려 있다.
+  임의의 셸 명령은 실행되지 않는다.
+- 유료 생성(음악·이미지)은 Claude 가 해야 한다. 대시보드는 그 단계에서
+  **"Claude 에 붙여넣기"** 버튼으로 지시문을 클립보드에 넣어 준다.
+  Claude 가 만들어 준 결과 URL 을 다시 대시보드에 붙여넣으면 파일로 가져온다.
+- 렌더링은 서버가 있는 PC 에서 돈다. **PC 가 꺼져 있으면 아무것도 안 된다.**
+  핸드폰은 조종기이지 렌더링 머신이 아니다.
+
+### 밖에서 접속하려면
+
+같은 Wi-Fi 가 아니면 기본적으로 접속되지 않는다(그게 안전하다).
+집 밖에서 쓰려면 터널을 하나 띄운다. 셋 중 하나면 충분하다.
+
+| 방법 | 명령 | 특징 |
+|---|---|---|
+| Tailscale | 두 기기에 설치 후 로그인 | 가장 안전. 내 기기끼리만 보인다. 무료 |
+| Cloudflare Tunnel | `cloudflared tunnel --url http://localhost:8765` | 임시 공개 주소. 계정 없이도 가능 |
+| ngrok | `ngrok http 8765` | 간단. 무료 플랜은 주소가 매번 바뀐다 |
+
+⚠️ 공개 주소로 열 때는 반드시 `?t=` 토큰을 유지하고, 그 주소를 남에게 보내지 않는다.
+`--no-token` 은 집 안 네트워크에서만 쓴다.
+
+### 옵션
+
+```bash
+python -m playlist_studio serve --port 9000        # 포트 변경
+python -m playlist_studio serve --host 127.0.0.1   # 이 PC 에서만 (외부 차단)
+python -m playlist_studio serve --token 내암호      # 토큰 고정 (즐겨찾기 하기 좋다)
+python -m playlist_studio serve --open             # 브라우저 자동 실행
+```
+
 ## 폴더 구조
 
 ```
@@ -123,7 +189,7 @@ macOS 에서 열어도 같은 파일을 가리킨다.
 ## 명령 목록
 
 ```
-doctor  selftest
+doctor  selftest  serve
 channel-new  channel-list  playlist-new  list
 config-status  config-set  config-show
 plan  dna-show  dna-set

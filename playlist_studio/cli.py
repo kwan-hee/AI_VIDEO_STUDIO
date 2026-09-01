@@ -1172,6 +1172,14 @@ def cmd_clean(a) -> None:
 
 
 # ---------------------------------------------------------------- 셀프테스트
+def cmd_serve(a) -> None:
+    """웹 대시보드를 띄운다. 핸드폰·다른 PC 브라우저에서 접속할 수 있다."""
+    from .webapp import serve
+    serve(host=a.host, port=a.port,
+          token=("" if a.no_token else a.token),
+          open_browser=a.open)
+
+
 def cmd_selftest(a) -> None:
     """합성 음원·이미지로 파이프라인 전체를 검증한다. 크레딧을 쓰지 않는다."""
     from .selftest import run_selftest
@@ -1365,6 +1373,17 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--work", action="store_true")
     s.add_argument("--norm", action="store_true")
     s.set_defaults(fn=cmd_clean)
+
+    s = sub.add_parser("serve", help="웹 대시보드 실행 (핸드폰에서 접속 가능)")
+    s.add_argument("--port", type=int, default=8765)
+    s.add_argument("--host", default="0.0.0.0",
+                   help="0.0.0.0 이면 같은 Wi-Fi 의 다른 기기에서도 접속 가능")
+    s.add_argument("--token", default=None,
+                   help="접속 토큰 직접 지정 (기본: 실행할 때마다 새로 생성)")
+    s.add_argument("--no-token", action="store_true",
+                   help="토큰 없이 연다. 신뢰할 수 있는 망에서만 쓰세요")
+    s.add_argument("--open", action="store_true", help="브라우저를 자동으로 연다")
+    s.set_defaults(fn=cmd_serve)
 
     s = sub.add_parser("selftest", help="합성 자산으로 전체 파이프라인 검증 (무료)")
     s.add_argument("--name", default="selftest")
