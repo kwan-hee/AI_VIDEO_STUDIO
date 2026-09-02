@@ -982,8 +982,11 @@ def cmd_subtitles(a) -> None:
                  c.config.get("playlist_title") or "",
                  f"{len(cards)}곡 · {hhmmss(total)}")
 
+    # SRT 는 언제나 전체 가사를 담는다 (보관·유튜브 자막 업로드용).
+    # ASS 만 --no-lyrics 로 가사를 비울 수 있다 — AI 보컬이 또렷하지 않아
+    # 싱크가 맞지 않을 때, 곡 제목 카드는 남기고 가사만 빼는 쪽이 낫다.
     SB.write_srt(c.paths.srt, lines)
-    SB.write_ass(c.paths.ass, lines,
+    SB.write_ass(c.paths.ass, [] if a.no_lyrics else lines,
                  preset=c.config.get("visual_preset", "black-gray-red"),
                  font=fc.family, font_size=a.font_size, cards=cards,
                  intro=intro)
@@ -991,11 +994,16 @@ def cmd_subtitles(a) -> None:
     c.ws.register(c.paths.ass, kind="subtitle")
     c.ws.step_done("align", f"{len(lines)}줄, 방식 {al['method']}")
     c.ws.advance("ALIGNED", f"자막 {len(lines)}줄")
+    mode = ("가사 없음 — 곡 제목·인트로만 화면에 뜹니다 "
+            "(SRT 에는 가사가 그대로 들어 있습니다)"
+            if a.no_lyrics else f"가사 {len(lines)}줄")
     emit(f"자막 생성\n  SRT: {c.paths.srt}\n  ASS: {c.paths.ass}\n"
          f"  폰트: {fc.family} ({'OK' if fc.ok else '⚠️ ' + fc.note})\n"
-         f"  줄 {len(lines)}개, 곡 카드 {len(cards)}개",
+         f"  화면 표시: {mode}, 곡 카드 {len(cards)}개\n"
+         f"  ⚠️ 바꾼 자막을 영상에 반영하려면 `render` 를 다시 실행하세요.",
          {"srt": str(c.paths.srt), "ass": str(c.paths.ass),
-          "font": fc.family, "font_ok": fc.ok, "lines": len(lines)})
+          "font": fc.family, "font_ok": fc.ok, "lines": len(lines),
+          "no_lyrics": bool(a.no_lyrics)})
 
 
 # ---------------------------------------------------------------- 8단계
@@ -1393,6 +1401,9 @@ def build_parser() -> argparse.ArgumentParser:
     s = proj(sub.add_parser("subtitles", help="SRT + ASS 생성"))
     s.add_argument("--font-size", type=int, default=58)
     s.add_argument("--intro-seconds", type=float, default=6.0)
+    s.add_argument("--no-lyrics", action="store_true",
+                   help="영상에 가사를 넣지 않는다 (곡 제목·인트로는 유지). "
+                        "AI 보컬이 또렷하지 않아 싱크가 안 맞을 때 쓰세요")
     s.set_defaults(fn=cmd_subtitles)
 
     s = proj(sub.add_parser("metadata"))

@@ -283,3 +283,55 @@ def test_block_warns_about_recharge_when_really_generated(proj, tmp_path):
 
     ok, d = run_json(["submit-payload", *args])
     assert d["credits_actually_spent"] is True
+
+
+# ---------------------------------------------------------------- 가사 빼기
+def _ready_for_subtitles(proj, tmp_path):
+    """음원까지 넣고 정렬을 끝낸 상태."""
+    from playlist_studio import testkit as TK
+
+    _fill_config(proj)
+    run(["plan", "--project", proj])
+    _write_lyrics(proj)
+    run(["lyrics-collect", "--project", proj])
+    for i in (1, 2):
+        clip = TK.synth_mp3(tmp_path / f"{i}.mp3", seconds=25, bpm=88 + i * 8, seed=i)
+        run(["track-import", "--project", proj, "--index", str(i),
+             "--src", str(clip), "--min-seconds", "10"])
+    run(["build-audio", "--project", proj, "--crossfade", "1.0", "--min-seconds", "10"])
+    run(["align", "--project", proj, "--method", "estimate"])
+
+
+def _ass_counts(proj):
+    from playlist_studio.paths import find_project
+    text = find_project(proj).ass.read_text(encoding="utf-8")
+    lyric = sum(1 for l in text.splitlines() if ",Active," in l and "pos(" not in l)
+    cards = sum(1 for l in text.splitlines() if ",TrackTitle," in l)
+    return lyric, cards
+
+
+def test_subtitles_include_lyrics_by_default(proj, tmp_path):
+    _ready_for_subtitles(proj, tmp_path)
+    ok, d = run_json(["subtitles", "--project", proj])
+    assert ok and d["no_lyrics"] is False
+    lyric, cards = _ass_counts(proj)
+    assert lyric > 0 and cards == 2
+
+
+def test_no_lyrics_keeps_track_cards_but_drops_lyrics(proj, tmp_path):
+    """AI 보컬이 또렷하지 않을 때의 탈출구. 곡 제목까지 잃으면 안 된다."""
+    _ready_for_subtitles(proj, tmp_path)
+    ok, d = run_json(["subtitles", "--project", proj, "--no-lyrics"])
+    assert ok and d["no_lyrics"] is True
+    lyric, cards = _ass_counts(proj)
+    assert lyric == 0
+    assert cards == 2
+
+
+def test_no_lyrics_still_writes_full_srt(proj, tmp_path):
+    """화면에서 뺐다고 보관용 SRT 까지 비우면 안 된다."""
+    from playlist_studio.paths import find_project
+    _ready_for_subtitles(proj, tmp_path)
+    run(["subtitles", "--project", proj, "--no-lyrics"])
+    srt = find_project(proj).srt.read_text(encoding="utf-8")
+    assert "창틀에 물기" in srt or "식은 컵을 데운다" in srt
