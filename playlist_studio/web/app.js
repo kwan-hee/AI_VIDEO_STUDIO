@@ -81,7 +81,8 @@ const ago = (iso) => {
 };
 
 // ---------------------------------------------------------------- 전역 상태
-const S = { boot: null, project: null, tab: '단계', busy: null, loading: false };
+const S = { boot: null, project: null, tab: '단계', busy: null, loading: false,
+            modalOpen: false };
 
 // ---------------------------------------------------------------- 작업 실행
 function showRun(text) {
@@ -766,6 +767,9 @@ function imagePrompt(p) {
 function modal(title, fields, onSubmit, extra) {
   const view = $('view');
   const inputs = {};
+  // 입력 중에는 자동 새로고침이 화면을 다시 그리지 못하게 잠근다.
+  // (잠그지 않으면 URL 을 복사해 오는 사이에 입력창이 사라진다)
+  S.modalOpen = true;
   const card = el('div', { class: 'card next' },
     el('div', { class: 'eyebrow' }, '입력'),
     el('h2', null, title));
@@ -786,17 +790,24 @@ function modal(title, fields, onSubmit, extra) {
     card.append(inp);
     if (f.hint) card.append(el('div', { class: 'hint' }, f.hint));
   }
+  const close = () => { S.modalOpen = false; render(); };
   card.append(el('div', { class: 'btn-row', style: 'margin-top:18px' },
-    el('button', { class: 'btn ghost', onclick: () => render() }, '취소'),
+    el('button', { class: 'btn ghost', onclick: close }, '취소'),
     el('button', {
       class: 'btn primary', onclick: () => {
         const vals = {};
         for (const [k, i] of Object.entries(inputs)) vals[k] = i.value.trim();
+        S.modalOpen = false;
         onSubmit(vals);
       },
     }, '확인')));
   view.innerHTML = '';
-  view.append(el('button', { class: 'btn ghost block', style: 'margin-bottom:12px', onclick: () => render() }, '← 돌아가기'), card);
+  view.append(
+    el('button', { class: 'btn ghost block', style: 'margin-bottom:12px', onclick: close },
+       '← 돌아가기'),
+    card,
+    el('div', { class: 'hint', style: 'text-align:center;margin-top:14px' },
+       '입력하는 동안에는 화면이 저절로 바뀌지 않습니다. 천천히 하세요.'));
 }
 
 function costDialog(p) {
@@ -1162,5 +1173,16 @@ function tabQA(view, p) {
   }
   await refresh();
   await navigate();
-  setInterval(() => { if (!S.busy && !$('sheet').classList.contains('open')) refresh(); }, 20000);
+  // 자동 새로고침. 아래 상황에서는 건너뛴다 — 그러지 않으면 사용자가
+  // 입력하거나 읽는 도중에 화면이 통째로 다시 그려진다.
+  //   · 작업 실행 중  · 로그 시트가 열려 있음  · 입력창이 열려 있음
+  //   · 지금 무언가에 타이핑 중  · 브라우저 탭이 백그라운드
+  setInterval(() => {
+    if (S.busy || S.modalOpen) return;
+    if ($('sheet').classList.contains('open')) return;
+    if (document.hidden) return;
+    const tag = (document.activeElement || {}).tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    refresh();
+  }, 60000);
 })();

@@ -237,3 +237,36 @@ def test_release_button_unblocks_it_again(server, project):
     assert rel["ok"] is True
     status, again = post(server, "/api/query", {"command": "submit-payload", "args": args})
     assert again["ok"] is True and again["data"]["claimed"] is True
+
+
+# ---------------------------------------------------------------- 화면 자동 갱신
+def _app_js() -> str:
+    from playlist_studio.webapp import WEB_DIR
+    return (WEB_DIR / "app.js").read_text(encoding="utf-8")
+
+
+def test_auto_refresh_is_guarded_against_wiping_open_dialogs():
+    """자동 새로고침이 입력 중인 화면을 다시 그리면 붙여넣던 값이 사라진다.
+
+    실제로 사용자가 결과 URL 을 복사해 오는 사이에 입력창이 닫히는 일이
+    있었다. 가드가 지워지면 같은 문제가 재발한다.
+    """
+    js = _app_js()
+    guard = js[js.index("setInterval("):]
+    for condition in ("S.busy", "S.modalOpen", "sheet", "document.hidden",
+                      "INPUT", "TEXTAREA", "SELECT"):
+        assert condition in guard[:900], f"자동 새로고침 가드에 {condition} 조건이 없습니다"
+
+
+def test_auto_refresh_interval_is_not_aggressive():
+    js = _app_js()
+    tail = js[js.index("setInterval("):]
+    ms = int(tail.split("}, ")[1].split(")")[0])
+    assert ms >= 60000, f"자동 새로고침이 {ms}ms 로 너무 잦습니다 (입력 시간이 부족)"
+
+
+def test_modal_sets_and_clears_the_lock():
+    js = _app_js()
+    body = js[js.index("function modal("):js.index("function costDialog(")]
+    assert "S.modalOpen = true;" in body
+    assert body.count("S.modalOpen = false;") >= 2   # 취소 · 확인 양쪽
