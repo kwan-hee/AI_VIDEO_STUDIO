@@ -319,7 +319,7 @@ def cmd_track_lyrics(a) -> None:
     c = Ctx(a.project)
     t = TR.get_track(c.tracks, a.index)
     if a.file:
-        text = Path(a.file).read_text(encoding="utf-8")
+        text = Path(a.file).read_text(encoding="utf-8-sig")
     elif a.text:
         text = a.text
     else:
@@ -870,7 +870,7 @@ def cmd_align(a) -> None:
         if method == "srt":
             srt_file = Path(a.srt_dir) / f"{idx:02d}.srt"
             if srt_file.exists():
-                segs = AL.parse_srt(srt_file.read_text(encoding="utf-8"))
+                segs = AL.parse_srt(srt_file.read_text(encoding="utf-8-sig"))
                 lines = AL.align_with_reference(segs, ref, track_start=entry["start"],
                                                 track_index=idx, source="srt")
             else:

@@ -79,3 +79,36 @@ def test_empty_lyrics_rejected(project):
 
 def test_normalization_is_stable():
     assert lyrics_fingerprint("가사\r\n둘  줄") == lyrics_fingerprint("가사\n둘 줄\n")
+
+
+# ---------------------------------------------------------------- Windows BOM
+def test_bom_prefixed_file_still_parses_tags(project, tmp_path):
+    """PowerShell 의 `Set-Content -Encoding UTF8` 은 BOM 을 붙인다.
+
+    그대로 읽으면 첫 줄 `[Intro]` 가 태그가 아니라 가사로 읽혀 구조가 깨진다.
+    """
+    from playlist_studio.util import read_text
+
+    f = tmp_path / "01.md"
+    f.write_bytes("﻿[Intro]\n[Verse]\n첫 줄\n[Chorus]\n후렴".encode("utf-8"))
+    assert f.read_bytes()[:3] == b"\xef\xbb\xbf"          # BOM 이 실제로 있다
+
+    tags = [t for t, _ in LY.parse_sections(read_text(f))]
+    assert tags == ["Intro", "Verse", "Chorus"]
+
+
+def test_bom_does_not_change_the_hash(project):
+    """BOM 유무로 해시가 달라지면 제출 직전 대조가 실패한다."""
+    plain = "[Verse]\n첫 줄\n[Chorus]\n후렴"
+    assert lyrics_fingerprint("﻿" + plain) == lyrics_fingerprint(plain)
+
+
+def test_bom_file_survives_save_and_verify(project, tmp_path):
+    t = _mk(1, "제목", "주제")
+    src = tmp_path / "in.md"
+    src.write_bytes("﻿[Verse]\n창밖\n[Chorus]\n후렴".encode("utf-8"))
+    from playlist_studio.util import read_text
+
+    LY.save_track_lyrics(project, t, read_text(src))
+    assert LY.verify_lyrics_hash(project, t)[0] is True
+    assert LY.validate_set(project, [t])["errors"] == []

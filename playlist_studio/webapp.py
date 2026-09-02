@@ -437,7 +437,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             self._json({"path": q.get("path", [""])[0],
-                        "text": target.read_text(encoding="utf-8", errors="replace")})
+                        "text": target.read_text(encoding="utf-8-sig", errors="replace")})
         except Exception as e:
             self._json({"error": str(e)}, 500)
 

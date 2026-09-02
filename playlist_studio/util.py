@@ -129,7 +129,8 @@ def normalize_lyrics(text: str) -> str:
     - 빈 줄 제거
     - 소문자화하지 않는다 (한글에는 무의미하고 영문 대소문자 차이는 의미가 있을 수 있음)
     """
-    text = unicodedata.normalize("NFC", str(text)).replace("\r\n", "\n").replace("\r", "\n")
+    text = str(text).replace("\ufeff", "")          # BOM / 제로폭 공백 제거
+    text = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n")
     lines = [_WS.sub(" ", ln).strip() for ln in text.split("\n")]
     return "\n".join(ln for ln in lines if ln)
 
@@ -180,10 +181,17 @@ def write_text(path: Path, text: str) -> Path:
 
 
 def read_text(path: Path, default: str | None = None) -> str | None:
+    """텍스트 파일 읽기.
+
+    utf-8-sig 로 읽는다. Windows PowerShell 의 `Set-Content -Encoding UTF8` 은
+    파일 앞에 BOM(U+FEFF)을 붙이는데, 그대로 읽으면 첫 줄의 `[Intro]` 같은
+    구조 태그가 태그로 인식되지 않는다. utf-8-sig 는 BOM 이 있으면 벗기고
+    없으면 일반 UTF-8 로 읽으므로 양쪽 모두 안전하다.
+    """
     path = Path(path)
     if not path.exists():
         return default
-    return path.read_text(encoding="utf-8")
+    return path.read_text(encoding="utf-8-sig")
 
 
 # --------------------------------------------------------------------------
