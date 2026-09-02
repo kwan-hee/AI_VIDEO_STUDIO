@@ -31,11 +31,13 @@ class AudioInfo:
     channels: int = 0
     bit_rate: int = 0
     format_name: str = ""
-    issues: tuple[str, ...] = ()
+    issues: tuple[str, ...] = ()          # 렌더링에서 제외해야 하는 사유
+    warnings: tuple[str, ...] = ()        # 알려주되 제외하지는 않는 사유
 
     def to_dict(self) -> dict:
         d = asdict(self)
         d["issues"] = list(self.issues)
+        d["warnings"] = list(self.warnings)
         return d
 
 
@@ -101,6 +103,7 @@ def validate(path: Path, *, min_seconds: float = 20.0,
     """렌더링에 넣어도 되는지 판정. issues 가 있으면 ok=False."""
     info = probe(path)
     issues = list(info.issues)
+    warnings: list[str] = []
     if info.ok:
         if info.duration < min_seconds:
             issues.append(f"너무 짧음: {info.duration:.1f}s < {min_seconds:.0f}s")
@@ -108,10 +111,12 @@ def validate(path: Path, *, min_seconds: float = 20.0,
             issues.append("채널 정보 없음")
         if info.sample_rate < 8000:
             issues.append(f"샘플레이트 비정상: {info.sample_rate}")
+        # 목표 길이와의 차이는 **경고**다. 생성 모델은 길이를 정확히 맞추지 않으며,
+        # 짧게 나왔다고 파일이 손상된 것은 아니다. 손상은 아래 검사들이 잡는다.
         if expect_seconds:
             drift = abs(info.duration - expect_seconds) / max(1.0, expect_seconds)
             if drift > tolerance:
-                issues.append(
+                warnings.append(
                     f"목표 길이와 {drift*100:.0f}% 차이 "
                     f"(목표 {expect_seconds:.0f}s / 실제 {info.duration:.1f}s)")
         try:
@@ -121,6 +126,7 @@ def validate(path: Path, *, min_seconds: float = 20.0,
         except Exception as e:  # 검사 실패가 곧 손상은 아니므로 경고로만
             issues.append(f"무음 검사 불가: {str(e)[:120]}")
     info.issues = tuple(issues)
+    info.warnings = tuple(warnings)
     info.ok = info.ok and not issues
     return info
 

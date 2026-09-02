@@ -60,9 +60,11 @@ def run_qa(paths: ProjectPaths, *, config: dict, tracks: Sequence[dict],
         info = A.validate(p, min_seconds=15)
         if info.ok:
             ok_tracks += 1
-            checks.append(Check(f"음원 {idx:02d}", PASS,
-                                f"{info.duration:.1f}s {info.codec} {info.sample_rate}Hz",
-                                info.to_dict()))
+            checks.append(Check(
+                f"음원 {idx:02d}", WARN if info.warnings else PASS,
+                f"{info.duration:.1f}s {info.codec} {info.sample_rate}Hz"
+                + (" — " + "; ".join(info.warnings) if info.warnings else ""),
+                info.to_dict()))
         else:
             checks.append(Check(f"음원 {idx:02d}", FAIL, "; ".join(info.issues) or "검사 실패",
                                 info.to_dict()))

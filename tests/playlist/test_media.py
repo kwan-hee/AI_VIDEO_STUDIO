@@ -188,3 +188,29 @@ def test_final_mp4_meets_spec(tmp_path):
     assert v["has_faststart"] is True
     assert abs(v["video_duration"] - v["audio_duration"]) < 0.5
     assert abs(v["duration"] - dur) < 1.0
+
+
+def test_short_song_is_a_warning_not_a_failure(tmp_path):
+    """생성 모델은 목표 길이를 정확히 맞추지 않는다.
+
+    짧게 나왔다고 '손상'으로 처리하면 멀쩡한 곡이 렌더링에서 빠진다.
+    """
+    clip = TK.synth_mp3(tmp_path / "short.mp3", seconds=40, seed=1)
+    info = A.validate(clip, min_seconds=20, expect_seconds=180)
+    assert info.ok is True                       # 렌더링에 포함된다
+    assert info.issues == ()
+    assert any("목표 길이" in w for w in info.warnings)
+
+
+def test_real_damage_is_still_a_failure(tmp_path):
+    bad = tmp_path / "bad.mp3"
+    bad.write_bytes(b"not audio at all" * 100)
+    info = A.validate(bad, min_seconds=1, expect_seconds=180)
+    assert info.ok is False and info.issues
+
+
+def test_too_short_to_be_usable_is_still_a_failure(tmp_path):
+    clip = TK.synth_mp3(tmp_path / "tiny.mp3", seconds=3, seed=1)
+    info = A.validate(clip, min_seconds=20, expect_seconds=180)
+    assert info.ok is False
+    assert any("너무 짧음" in i for i in info.issues)

@@ -568,6 +568,8 @@ def cmd_track_import(a) -> None:
                          credits=t.get("credit_cost"), output_path=t["output_path"])
 
     status = "✅ 정상" if info.ok else "❌ " + "; ".join(info.issues)
+    if info.warnings:
+        status += "\n  ⚠️ " + "; ".join(info.warnings)
     emit(f"트랙 {a.index:02d} 가져오기 완료\n"
          f"  파일: {t['output_path']}\n"
          f"  길이 {info.duration:.1f}s / {info.codec} {info.sample_rate}Hz "
