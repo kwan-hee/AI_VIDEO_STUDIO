@@ -881,6 +881,23 @@ def cmd_build_audio(a) -> None:
     emit("\n".join(human), timing)
 
 
+def _per_track_values(spec, count: int, what: str) -> list[float | None]:
+    """`20` 처럼 하나만 주면 전 곡에, `20,15` 처럼 주면 곡별로 적용한다."""
+    if spec in (None, ""):
+        return [None] * count
+    try:
+        vals = [float(x.strip()) for x in str(spec).split(",") if x.strip()]
+    except ValueError:
+        die(f"{what} 값은 숫자여야 합니다: {spec}  (예: 20  또는  20,15)")
+    if not vals:
+        return [None] * count
+    if len(vals) == 1:
+        return vals * count
+    if len(vals) < count:
+        vals += [vals[-1]] * (count - len(vals))
+    return vals[:count]
+
+
 def cmd_align(a) -> None:
     c = Ctx(a.project)
     timing = c.timing
@@ -893,9 +910,13 @@ def cmd_align(a) -> None:
         if a.srt_dir:
             method = "srt"
 
+    entries = timing["tracks"]
+    leads = _per_track_values(a.lead_in, len(entries), "--lead-in")
+    tails = _per_track_values(a.tail, len(entries), "--tail")
+
     all_lines: list[AL.TimedLine] = []
     per_track: list[dict] = []
-    for entry in timing["tracks"]:
+    for pos, entry in enumerate(entries):
         idx = entry["index"]
         t = TR.get_track(c.tracks, idx)
         try:
@@ -934,10 +955,12 @@ def cmd_align(a) -> None:
             used = "estimate"
             lines = AL.estimate_lines(ref, track_start=entry["start"],
                                       duration=entry["duration"], track_index=idx,
-                                      lead_in_seconds=a.lead_in,
-                                      tail_seconds=a.tail)
+                                      lead_in_seconds=leads[pos],
+                                      tail_seconds=tails[pos])
         all_lines.extend(lines)
-        per_track.append({"index": idx, "lines": len(lines), "method": used})
+        per_track.append({"index": idx, "lines": len(lines), "method": used,
+                          "lead_in_seconds": leads[pos],
+                          "first_line_at": round(lines[0].start, 2) if lines else None})
 
     if not all_lines:
         c.ws.step_failed("align", "정렬할 가사가 없습니다")
@@ -955,7 +978,12 @@ def cmd_align(a) -> None:
     timing["last_subtitle_end"] = round(max(l.end for l in all_lines), 3)
     c.save_timing(timing)
     c.ws.register(c.paths.subs / "alignment.json", kind="alignment")
-    emit(f"정렬 완료 — 방식 `{effective}`, {len(all_lines)}줄\n"
+    detail = "\n".join(
+        f"  {t['index']:02d}번 곡 — {t['method']}, {t['lines']}줄, "
+        f"첫 자막 {t['first_line_at']}s"
+        + (f" (전주 {t['lead_in_seconds']:g}초 지정)" if t["lead_in_seconds"] else "")
+        for t in per_track if t["lines"])
+    emit(f"정렬 완료 — 방식 `{effective}`, {len(all_lines)}줄\n{detail}\n"
          f"  {report['accuracy_claim']}\n"
          f"  마지막 자막 {timing['last_subtitle_end']:.2f}s / 전체 {timing['total_duration']:.2f}s",
          {"report": report, "per_track": per_track,
@@ -1391,11 +1419,12 @@ def build_parser() -> argparse.ArgumentParser:
                    default="auto")
     s.add_argument("--srt-dir", help="곡별 SRT 폴더 (01.srt, 02.srt ...)")
     s.add_argument("--whisper-model", default="small")
-    s.add_argument("--lead-in", type=float, default=None,
+    s.add_argument("--lead-in", default=None,
                    help="전주 길이(초). 추정 배분에서 이만큼 앞을 비운다. "
-                        "곡을 들어보고 노래가 시작되는 시각을 넣으세요")
-    s.add_argument("--tail", type=float, default=None,
-                   help="아웃트로 길이(초). 마지막 이만큼을 비운다")
+                        "곡을 들어보고 노래가 시작되는 시각을 넣으세요. "
+                        "`20` 이면 전 곡에, `20,15` 면 곡별로 적용")
+    s.add_argument("--tail", default=None,
+                   help="아웃트로 길이(초). `8` 또는 `8,6` 처럼 곡별 지정 가능")
     s.set_defaults(fn=cmd_align)
 
     s = proj(sub.add_parser("subtitles", help="SRT + ASS 생성"))

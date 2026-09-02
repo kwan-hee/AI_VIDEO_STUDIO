@@ -335,3 +335,44 @@ def test_no_lyrics_still_writes_full_srt(proj, tmp_path):
     run(["subtitles", "--project", proj, "--no-lyrics"])
     srt = find_project(proj).srt.read_text(encoding="utf-8")
     assert "창틀에 물기" in srt or "식은 컵을 데운다" in srt
+
+
+# ---------------------------------------------------------------- 곡별 전주 지정
+def test_per_track_values_parsing():
+    from playlist_studio.cli import _per_track_values
+    assert _per_track_values("20", 2, "x") == [20.0, 20.0]
+    assert _per_track_values("20,15", 2, "x") == [20.0, 15.0]
+    assert _per_track_values("20", 3, "x") == [20.0, 20.0, 20.0]   # 하나면 전 곡에
+    assert _per_track_values("20,15", 3, "x") == [20.0, 15.0, 15.0]  # 모자라면 마지막 값
+    assert _per_track_values("20,15,10", 2, "x") == [20.0, 15.0]     # 남으면 자른다
+    assert _per_track_values(None, 2, "x") == [None, None]
+    assert _per_track_values("", 2, "x") == [None, None]
+
+
+def test_lead_in_pushes_the_first_subtitle_past_the_intro(proj, tmp_path):
+    """실사용: 노래는 20초대에 시작하는데 자막이 11초에 떴다."""
+    _ready_for_subtitles(proj, tmp_path)
+    ok, d = run_json(["align", "--project", proj, "--method", "estimate",
+                      "--lead-in", "12"])
+    assert ok
+    first = d["per_track"][0]
+    assert first["lead_in_seconds"] == 12.0
+    assert first["first_line_at"] >= 11.9
+
+
+def test_lead_in_can_differ_per_track(proj, tmp_path):
+    _ready_for_subtitles(proj, tmp_path)
+    ok, d = run_json(["align", "--project", proj, "--method", "estimate",
+                      "--lead-in", "12,5"])
+    assert ok
+    t1, t2 = d["per_track"][0], d["per_track"][1]
+    assert t1["lead_in_seconds"] == 12.0 and t2["lead_in_seconds"] == 5.0
+    # 2번 곡은 자기 시작점 기준으로 5초 뒤
+    assert t2["first_line_at"] > t1["first_line_at"]
+
+
+def test_bad_lead_in_value_is_rejected_clearly(proj, tmp_path):
+    _ready_for_subtitles(proj, tmp_path)
+    ok, out = run(["align", "--project", proj, "--method", "estimate",
+                   "--lead-in", "스무초"])
+    assert not ok
