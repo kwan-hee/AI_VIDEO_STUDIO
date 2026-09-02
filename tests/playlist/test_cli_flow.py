@@ -245,3 +245,41 @@ def test_cost_without_model_flag_does_not_overwrite_config(proj):
     assert d["saved_to_config"] is False
     ok, cfg = run_json(["config-show", "--project", proj])
     assert cfg["music_model"] == "se-lyria3-t2a"
+
+
+# ---------------------------------------------------------------- 중복 차단 안내
+def test_block_says_no_credits_spent_when_never_submitted(proj):
+    """준비만 하고 멈춘 자물쇠는 돈이 안 나갔다고 분명히 말해야 한다.
+
+    '크레딧이 또 나갑니다' 라고만 하면 사용자가 안전한 해제를 겁내게 된다.
+    """
+    _ready_for_submit(proj)
+    args = ["--project", proj, "--index", "1", "--claim"]
+    run(["submit-payload", *args])              # 자물쇠만 걸고 제출은 안 함
+
+    ok, out = run(["submit-payload", *args])
+    assert not ok
+    assert "크레딧은 나가지 않았습니다" in out
+    assert "안전하게 풀고" in out
+
+    ok, d = run_json(["submit-payload", *args])
+    assert d["credits_actually_spent"] is False
+
+
+def test_block_warns_about_recharge_when_really_generated(proj, tmp_path):
+    from playlist_studio import testkit as TK
+
+    _ready_for_submit(proj)
+    args = ["--project", proj, "--index", "1", "--claim"]
+    run(["submit-payload", *args])
+    clip = TK.synth_mp3(tmp_path / "a.mp3", seconds=40, seed=1)
+    run(["track-import", "--project", proj, "--index", "1", "--src", str(clip),
+         "--job-id", "JOB-9", "--credit-cost", "48", "--min-seconds", "20"])
+
+    ok, out = run(["submit-payload", *args])
+    assert not ok
+    assert "실제로 만들어졌습니다" in out and "JOB-9" in out
+    assert "또 나갑니다" in out
+
+    ok, d = run_json(["submit-payload", *args])
+    assert d["credits_actually_spent"] is True

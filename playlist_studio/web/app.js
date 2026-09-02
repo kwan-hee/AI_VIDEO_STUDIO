@@ -655,15 +655,25 @@ async function payloadDialog(p, index) {
     if (!r.ok) {
       const d = r.data || {};
       if (d.blocked) {
-        openSheet('⛔ 중복 생성 차단',
-          [`${v.index}번 곡은 같은 모델·프롬프트·가사로 이미 요청한 적이 있습니다.`,
-           `상태: ${(d.existing || {}).status}`,
-           `job_key: ${(d.existing || {}).provider_job_id || '(제출 직후, 미기록)'}`,
-           `크레딧: ${(d.existing || {}).credits}`,
-           '',
-           '같은 곡을 두 번 결제하지 않도록 막은 것입니다.',
-           '정말 다시 만들려면 [자물쇠 풀기] 를 누르세요. 크레딧이 다시 나갑니다.',
-          ].join('\n'));
+        const ex = d.existing || {};
+        const spent = !!ex.provider_job_id;   // job_key 가 있어야 실제로 제출된 것
+        openSheet(spent ? '⛔ 이미 만든 곡입니다' : '🔓 자물쇠만 남아 있습니다',
+          spent
+            ? [`${v.index}번 곡은 이미 만들어졌습니다.`,
+               ``,
+               `job_key: ${ex.provider_job_id}`,
+               `나간 크레딧: ${ex.credits}`,
+               ``,
+               `다시 만들면 ${ex.credits} 크레딧이 또 나갑니다.`,
+               `그래도 새로 만들려면 [자물쇠 풀기] 를 누르세요.`,
+              ].join('\n')
+            : [`${v.index}번 곡은 준비만 하고 제출되지 않았습니다.`,
+               ``,
+               `✅ 크레딧은 나가지 않았습니다. (job_key 가 없습니다)`,
+               ``,
+               `준비하다 멈춘 자물쇠만 남아 있는 상태입니다.`,
+               `[자물쇠 풀기] 를 눌러 안전하게 푼 뒤 다시 진행하세요.`,
+              ].join('\n'));
       } else {
         openSheet('제출 인자 만들기 실패', (d.error || JSON.stringify(d, null, 2)));
       }
@@ -709,8 +719,9 @@ function releaseDialog(p, index) {
       ['--project', p.key, '--index', v.index, '--reason', v.reason || '재시도'],
       `${v.index}번 곡 자물쇠 해제`);
   }, el('div', { class: 'paidbox' },
-      '⚠️ 자물쇠를 풀고 다시 만들면 크레딧이 또 차감됩니다. '
-      + '이미 완료된 곡은 풀리지 않습니다.'));
+      'job_key 가 없는 건(준비만 하고 멈춘 것)은 크레딧이 나가지 않았으므로 '
+      + '안전하게 풀 수 있습니다. 실제로 만들어진 곡을 풀고 다시 만들면 '
+      + '크레딧이 또 차감됩니다. 이미 완료 처리된 곡은 풀리지 않습니다.'));
 }
 
 function pilotPrompt(p) {

@@ -424,14 +424,31 @@ def cmd_submit_payload(a) -> None:
     led = c.ledger
     prev = led.get(fp)
     if prev and prev.get("status") in ("claimed", "done") and not a.force:
-        emit(f"⛔ 중복 생성 차단\n\n트랙 {a.index:02d} 는 같은 모델·프롬프트·가사로 "
-             f"이미 {prev['status']} 상태입니다.\n"
-             f"  job_id: {prev.get('provider_job_id') or '(제출 직후, 미기록)'}\n"
-             f"  시각: {prev.get('claimed_at')}\n"
-             f"  크레딧: {prev.get('credits')}\n\n"
-             f"다시 만들려면 프롬프트나 가사를 바꾸거나, 실패한 건이면 "
-             f"`ledger-release --project {a.project} --index {a.index}` 로 해제하세요.",
-             {"blocked": True, "reason": "duplicate", "existing": prev})
+        job = prev.get("provider_job_id")
+        spent = bool(job)          # job_id 가 있어야 실제로 제출된 것이다
+        if spent:
+            verdict = [
+                f"이 곡은 **실제로 만들어졌습니다** (job {job}).",
+                f"크레딧 {prev.get('credits')} 가 이미 나갔습니다.",
+                "",
+                "다시 만들면 **같은 금액이 또 나갑니다.** 그래도 다시 만들려면:",
+            ]
+        else:
+            verdict = [
+                "이 곡은 **준비만 하고 제출되지 않았습니다** (job_id 없음).",
+                "**크레딧은 나가지 않았습니다.** 자물쇠만 남아 있는 상태입니다.",
+                "",
+                "안전하게 풀고 다시 진행할 수 있습니다:",
+            ]
+        emit("\n".join([
+            f"⛔ 중복 생성 차단 — 트랙 {a.index:02d}",
+            "",
+            *verdict,
+            f"  `ledger-release --project {a.project} --index {a.index}`",
+            "",
+            f"  상태: {prev['status']} / 잠근 시각: {prev.get('claimed_at')}",
+        ]), {"blocked": True, "reason": "duplicate", "existing": prev,
+             "credits_actually_spent": spent})
         raise SystemExit(3)
 
     spec = CO.model_spec(model)
