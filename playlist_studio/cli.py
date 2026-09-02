@@ -373,6 +373,11 @@ def cmd_lyrics_collect(a) -> None:
 def cmd_cost(a) -> None:
     c = Ctx(a.project)
     model = a.model or c.config.get("music_model") or CO.DEFAULT_MUSIC_MODEL
+    # 여기서 고른 모델을 저장해 둔다. 저장하지 않으면 submit-payload 가 기본
+    # 모델(가장 비싼 것)로 되돌아가, 견적에서 본 금액과 실제 차감액이 달라진다.
+    if a.model and c.config.get("music_model") != a.model:
+        c.config["music_model"] = a.model
+        c.save_config()
     done = len(c.ledger.done_indices()) if not a.ignore_done else 0
     est = CO.estimate(model, len(c.tracks) or int(c.config.get("track_count", 0)),
                       already_done=done, balance=a.balance,
@@ -386,14 +391,21 @@ def cmd_cost(a) -> None:
     elif est.shortfall > 0:
         warn = (f"\n\n❌ 크레딧이 {est.shortfall} 부족합니다. 곡 수를 줄이거나 "
                 f"더 저렴한 모델을 쓰세요. (Popcorn 1.0 = 48cr/곡)")
-    emit("## 크레딧 견적\n\n" + est.table() + warn, est.to_dict())
+    saved = ""
+    if a.model:
+        saved = (f"\n\n선택한 모델을 `playlist.yaml` 에 저장했습니다 "
+                 f"(`music_model: {model}`). 이제 `submit-payload` 도 같은 모델을 씁니다.")
+    emit("## 크레딧 견적\n\n" + est.table() + warn + saved,
+         {**est.to_dict(), "saved_to_config": bool(a.model)})
 
 
 def cmd_submit_payload(a) -> None:
     """MCP abocado_generate_audio 에 넣을 인자를 만든다. 제출은 스킬이 한다."""
     c = Ctx(a.project)
     t = TR.get_track(c.tracks, a.index)
-    model = a.model or c.config.get("music_model") or CO.DEFAULT_MUSIC_MODEL
+    chosen = a.model or c.config.get("music_model")
+    model = chosen or CO.DEFAULT_MUSIC_MODEL
+    fell_back = chosen is None
 
     ok, why = LY.verify_lyrics_hash(c.paths, t)
     instrumental = c.config.get("vocal_mode") == "instrumental"
@@ -445,6 +457,17 @@ def cmd_submit_payload(a) -> None:
     human = [
         f"## 트랙 {a.index:02d} 제출 페이로드 — {t.get('title') or '(제목 없음)'}",
         "",
+    ]
+    if fell_back:
+        human += [
+            f"> ⚠️ **모델을 고른 적이 없어 기본값 `{model}` ({spec['display']}, "
+            f"{credits} cr/곡) 을 씁니다.**",
+            f"> 더 싼 모델을 쓰려면 먼저 "
+            f"`cost --project {a.project} --model <모델키> --balance <잔액>` 을 "
+            f"실행해 모델을 정하세요. 예: `--model se-motion-music-t2a` (48 cr)",
+            "",
+        ]
+    human += [
         f"- 모델: `{model}` ({spec['display']}) — {credits} cr",
         f"- 프롬프트 {payload['prompt_chars']}/{payload['prompt_limit']}자",
         f"- 가사 {len(lyrics)}자, 해시 `{(t.get('lyrics_sha256') or '')[:16]}`",

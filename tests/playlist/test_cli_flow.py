@@ -195,3 +195,53 @@ def test_json_output_is_parseable_everywhere(proj):
         cmd = argv + (["--project", proj] if argv[0] not in ("channel-list", "list") else [])
         ok, out = run(["--json", *cmd])
         json.loads(out)
+
+
+# ---------------------------------------------------------------- 모델 선택 유지
+def _ready_for_submit(proj):
+    _fill_config(proj)
+    run(["plan", "--project", proj])
+    _write_lyrics(proj)
+    run(["lyrics-collect", "--project", proj])
+
+
+def test_cost_persists_the_chosen_model(proj):
+    """견적에서 고른 모델이 저장되지 않으면 제출 때 기본값(최고가)로 돌아간다."""
+    _ready_for_submit(proj)
+    ok, d = run_json(["cost", "--project", proj, "--model", "se-motion-music-t2a",
+                      "--balance", "134"])
+    assert ok and d["saved_to_config"] is True
+
+    ok, cfg = run_json(["config-show", "--project", proj])
+    assert cfg["music_model"] == "se-motion-music-t2a"
+
+    ok, p = run_json(["submit-payload", "--project", proj, "--index", "1"])
+    assert p["arguments"]["model"] == "se-motion-music-t2a"
+    assert p["credits"] == 48
+
+
+def test_submit_warns_loudly_when_no_model_was_chosen(proj):
+    """모델을 안 고르면 240cr 짜리 기본값이 조용히 쓰이면 안 된다."""
+    _ready_for_submit(proj)
+    ok, out = run(["submit-payload", "--project", proj, "--index", "1"])
+    assert ok
+    assert "모델을 고른 적이 없어" in out
+    assert "se-motion-music-t2a" in out          # 더 싼 대안을 알려준다
+
+
+def test_explicit_model_flag_still_wins(proj):
+    _ready_for_submit(proj)
+    run(["cost", "--project", proj, "--model", "se-motion-music-t2a", "--balance", "134"])
+    ok, p = run_json(["submit-payload", "--project", proj, "--index", "1",
+                      "--model", "se-lyria3-t2a"])
+    assert p["arguments"]["model"] == "se-lyria3-t2a"
+    assert p["credits"] == 64
+
+
+def test_cost_without_model_flag_does_not_overwrite_config(proj):
+    _ready_for_submit(proj)
+    run(["cost", "--project", proj, "--model", "se-lyria3-t2a", "--balance", "500"])
+    ok, d = run_json(["cost", "--project", proj, "--balance", "500"])
+    assert d["saved_to_config"] is False
+    ok, cfg = run_json(["config-show", "--project", proj])
+    assert cfg["music_model"] == "se-lyria3-t2a"
