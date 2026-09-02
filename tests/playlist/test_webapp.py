@@ -270,3 +270,26 @@ def test_modal_sets_and_clears_the_lock():
     body = js[js.index("function modal("):js.index("function costDialog(")]
     assert "S.modalOpen = true;" in body
     assert body.count("S.modalOpen = false;") >= 2   # 취소 · 확인 양쪽
+
+
+def test_every_step_offers_its_actions():
+    """아직 차례가 아닌 단계도 버튼이 보여야 한다.
+
+    단계 표시가 실제 진행보다 뒤처지면(곡은 다 만들었는데 batch-status 를
+    아직 안 돌린 경우 등) 다음 단계 버튼이 아예 안 보여 막혔다.
+    """
+    js = _app_js()
+    body = js[js.index("const list = el('div', { class: 'card' }, el('h2', null, '전체 단계'));"):]
+    body = body[:body.index("view.append(list);")]
+    assert "s.status !== 'pending' || isNext" not in body, "pending 단계를 숨기는 조건이 남아 있습니다"
+    assert "const acts = stepActions(s.key, p).items;" in body
+    assert "acts.length ?" in body
+
+
+def test_all_nine_steps_have_at_least_one_action_defined():
+    """단계별 버튼 정의가 비어 있으면 사용자가 그 단계에서 아무것도 못 한다."""
+    js = _app_js()
+    fn = js[js.index("function stepActions("):js.index("function formatValidation(")]
+    for key in ("plan", "lyrics", "pilot", "batch", "visuals", "align",
+                "metadata", "render"):
+        assert f"key === '{key}'" in fn or f"'{key}'" in fn, f"{key} 단계 동작이 없습니다"

@@ -483,15 +483,18 @@ function tabSteps(view, p) {
     const isNext = next && next.key === s.key;
     const cls = 'step ' + (s.status === 'done' ? 'done' : s.status === 'failed' ? 'failed'
       : isNext ? 'current' : '');
-    const acts = s.status === 'done' || isNext ? null : null;
+    // 아직 차례가 아닌 단계도 버튼을 보여준다. 순서가 조금 어긋났을 때
+    // (예: 곡은 다 만들었는데 단계 표시만 안 넘어간 경우) 막히지 않도록.
+    // 진짜 전제조건은 CLI 가 검사하므로 여기서 숨길 이유가 없다.
+    const acts = stepActions(s.key, p).items;
     list.append(el('div', { class: cls },
       el('div', { class: 'num' }, s.status === 'done' ? '✓' : s.status === 'failed' ? '!' : s.n),
       el('div', { class: 'body' },
         el('div', { class: 't' }, s.title),
         s.error ? el('div', { class: 'n err' }, s.error.split('\n')[0].slice(0, 220))
           : s.note ? el('div', { class: 'n' }, s.note) : null,
-        (s.status !== 'pending' || isNext) ? el('div', { class: 'acts' },
-          ...stepActions(s.key, p).items.map((a) => actionButton(a, false, true))) : null)));
+        acts.length ? el('div', { class: 'acts' },
+          ...acts.map((a) => actionButton(a, false, true))) : null)));
   }
   view.append(list);
 
