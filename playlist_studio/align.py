@@ -181,14 +181,23 @@ def _enforce_order(lines: list[TimedLine], min_dur: float = 0.6,
 # ---------------------------------------------------------------- 폴백 배분
 def estimate_lines(ref_lines: Sequence[str], *, track_start: float,
                    duration: float, track_index: int = 1,
-                   lead_in_ratio: float = 0.10, tail_ratio: float = 0.08,
+                   lead_in_ratio: float = 0.15, tail_ratio: float = 0.08,
+                   lead_in_seconds: float | None = None,
+                   tail_seconds: float | None = None,
                    ) -> list[TimedLine]:
-    """글자수 비례 배분. 인트로/아웃트로 구간은 비워 둔다."""
+    """글자수 비례 배분. 전주/아웃트로 구간은 비워 둔다.
+
+    lead_in_seconds 를 주면 비율 대신 그 초만큼 앞을 비운다. 곡을 들어보고
+    "노래가 12초부터 시작한다" 를 알면 그 값을 직접 넣는 쪽이 훨씬 정확하다.
+    비율 기본값 0.15 는 전주가 있는 곡에서 0.10 이 너무 짧았기 때문이다.
+    """
     ref_lines = [l for l in ref_lines if l.strip()]
     if not ref_lines or duration <= 0:
         return []
-    lead = duration * lead_in_ratio
-    tail = duration * tail_ratio
+    lead = lead_in_seconds if lead_in_seconds is not None else duration * lead_in_ratio
+    tail = tail_seconds if tail_seconds is not None else duration * tail_ratio
+    lead = max(0.0, min(lead, duration * 0.6))          # 곡 대부분을 비우지는 않는다
+    tail = max(0.0, min(tail, duration * 0.3))
     usable = max(1.0, duration - lead - tail)
     weights = [max(1, len(_key(l))) for l in ref_lines]
     total_w = sum(weights)

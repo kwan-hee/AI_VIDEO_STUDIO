@@ -933,7 +933,9 @@ def cmd_align(a) -> None:
         if not lines:
             used = "estimate"
             lines = AL.estimate_lines(ref, track_start=entry["start"],
-                                      duration=entry["duration"], track_index=idx)
+                                      duration=entry["duration"], track_index=idx,
+                                      lead_in_seconds=a.lead_in,
+                                      tail_seconds=a.tail)
         all_lines.extend(lines)
         per_track.append({"index": idx, "lines": len(lines), "method": used})
 
@@ -1381,6 +1383,11 @@ def build_parser() -> argparse.ArgumentParser:
                    default="auto")
     s.add_argument("--srt-dir", help="곡별 SRT 폴더 (01.srt, 02.srt ...)")
     s.add_argument("--whisper-model", default="small")
+    s.add_argument("--lead-in", type=float, default=None,
+                   help="전주 길이(초). 추정 배분에서 이만큼 앞을 비운다. "
+                        "곡을 들어보고 노래가 시작되는 시각을 넣으세요")
+    s.add_argument("--tail", type=float, default=None,
+                   help="아웃트로 길이(초). 마지막 이만큼을 비운다")
     s.set_defaults(fn=cmd_align)
 
     s = proj(sub.add_parser("subtitles", help="SRT + ASS 생성"))

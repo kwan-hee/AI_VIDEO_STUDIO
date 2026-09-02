@@ -112,3 +112,32 @@ def test_next_line_preview_only_within_same_track(tmp_path):
     body = write_ass(tmp_path / "a.ass", lines).read_text(encoding="utf-8")
     dim_events = [l for l in body.splitlines() if l.startswith("Dialogue:") and ",Dim," in l]
     assert dim_events == []
+
+
+# ---------------------------------------------------------------- 전주 처리
+def test_lyrics_do_not_start_during_the_intro():
+    """전주에 가사가 뜨는 것이 실사용에서 가장 거슬리는 문제였다."""
+    ref = ["첫 줄", "둘째 줄", "셋째 줄"]
+    lines = estimate_lines(ref, track_start=0.0, duration=90.0)
+    assert lines[0].start >= 90.0 * 0.14        # 기본 전주 15% 이상 비운다
+
+
+def test_explicit_intro_length_is_respected():
+    ref = ["첫 줄", "둘째 줄", "셋째 줄"]
+    lines = estimate_lines(ref, track_start=0.0, duration=90.0, lead_in_seconds=20.0)
+    assert abs(lines[0].start - 20.0) < 0.01
+    assert lines[-1].end <= 90.0
+
+
+def test_absurd_intro_length_is_clamped():
+    """전주를 곡보다 길게 넣어도 가사가 사라지면 안 된다."""
+    ref = ["첫 줄", "둘째 줄"]
+    lines = estimate_lines(ref, track_start=0.0, duration=60.0, lead_in_seconds=500.0)
+    assert lines[0].start <= 60.0 * 0.6 + 0.01
+    assert len(lines) == 2
+
+
+def test_track_offset_still_applies_with_explicit_intro():
+    lines = estimate_lines(["가", "나"], track_start=100.0, duration=60.0,
+                           lead_in_seconds=10.0)
+    assert abs(lines[0].start - 110.0) < 0.01
