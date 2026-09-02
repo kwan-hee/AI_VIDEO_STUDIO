@@ -22,6 +22,7 @@ import sys
 import threading
 import time
 import uuid
+import sys as _sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -479,7 +480,9 @@ class Handler(BaseHTTPRequestHandler):
                         break
                     self.wfile.write(chunk)
                     remaining -= len(chunk)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # 브라우저가 탐색바를 움직이거나 페이지를 떠나면 전송 중인 연결을
+            # 그냥 끊는다. 정상 동작이므로 조용히 넘어간다.
             pass
 
     def _serve_static(self, name: str) -> None:
@@ -490,6 +493,24 @@ class Handler(BaseHTTPRequestHandler):
         ctype = {"html": "text/html", "css": "text/css",
                  "js": "application/javascript"}[name.rsplit(".", 1)[1]]
         self._text(f.read_text(encoding="utf-8"), 200, ctype)
+
+
+class QuietHTTPServer(ThreadingHTTPServer):
+    """클라이언트가 끊어서 나는 예외로 화면을 어지럽히지 않는 서버.
+
+    영상 탐색·페이지 이동 때마다 브라우저가 전송 중인 연결을 끊는데,
+    기본 서버는 그때마다 traceback 을 통째로 출력한다. 정상 동작이라
+    사용자에게는 오류로 보일 뿐이므로 조용히 넘긴다. 진짜 오류는 그대로 낸다.
+    """
+
+    daemon_threads = True
+
+    def handle_error(self, request, client_address) -> None:
+        exc = _sys.exc_info()[1]
+        if isinstance(exc, (BrokenPipeError, ConnectionResetError,
+                            ConnectionAbortedError, TimeoutError)):
+            return
+        super().handle_error(request, client_address)
 
 
 # ---------------------------------------------------------------- 실행
@@ -511,7 +532,7 @@ def lan_ip() -> str:
 def serve(host: str = "0.0.0.0", port: int = 8765, token: str | None = None,
           open_browser: bool = False) -> None:
     Handler.token = token if token is not None else secrets.token_urlsafe(9)
-    httpd = ThreadingHTTPServer((host, port), Handler)
+    httpd = QuietHTTPServer((host, port), Handler)
     ip = lan_ip()
     suffix = f"?t={Handler.token}" if Handler.token else ""
     local = f"http://127.0.0.1:{port}/{suffix}"

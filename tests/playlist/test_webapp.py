@@ -293,3 +293,43 @@ def test_all_nine_steps_have_at_least_one_action_defined():
     for key in ("plan", "lyrics", "pilot", "batch", "visuals", "align",
                 "metadata", "render"):
         assert f"key === '{key}'" in fn or f"'{key}'" in fn, f"{key} 단계 동작이 없습니다"
+
+
+# ---------------------------------------------------------------- 연결 끊김 소음
+def test_client_disconnects_do_not_print_tracebacks(monkeypatch):
+    """영상 탐색·페이지 이동 때마다 브라우저가 연결을 끊는다.
+
+    정상 동작인데 traceback 이 쏟아지면 사용자에게는 오류로 보인다.
+    """
+    printed = []
+    monkeypatch.setattr(W.ThreadingHTTPServer, "handle_error",
+                        lambda self, req, addr: printed.append(addr))
+
+    srv = W.QuietHTTPServer.__new__(W.QuietHTTPServer)
+    for exc in (BrokenPipeError(), ConnectionResetError(),
+                ConnectionAbortedError(), TimeoutError()):
+        try:
+            raise exc
+        except Exception:
+            srv.handle_error(None, ("127.0.0.1", 1234))
+    assert printed == [], "연결 끊김으로 traceback 이 출력되었습니다"
+
+
+def test_real_errors_are_still_reported(monkeypatch):
+    printed = []
+    monkeypatch.setattr(W.ThreadingHTTPServer, "handle_error",
+                        lambda self, req, addr: printed.append(addr))
+    srv = W.QuietHTTPServer.__new__(W.QuietHTTPServer)
+    try:
+        raise ValueError("진짜 오류")
+    except Exception:
+        srv.handle_error(None, ("127.0.0.1", 1234))
+    assert len(printed) == 1, "진짜 오류까지 삼키면 안 됩니다"
+
+
+def test_media_streaming_catches_windows_abort():
+    """WinError 10053 은 ConnectionAbortedError 로 온다."""
+    import inspect
+    src = inspect.getsource(W.Handler._serve_media)
+    assert "ConnectionAbortedError" in src
+    assert "BrokenPipeError" in src and "ConnectionResetError" in src
