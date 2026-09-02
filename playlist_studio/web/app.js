@@ -549,13 +549,12 @@ function stepActions(key, p) {
 
   if (key === 'pilot' || key === 'batch') {
     const isPilot = key === 'pilot';
+    const target = isPilot ? 1 : (p.tracks.find((t) => t.status !== 'verified') || {}).index;
     return {
       paid: true,
       items: [
         A('① 크레딧 계산', () => costDialog(p)),
-        A('② Claude 에 붙여넣기', () => claudeCard(
-          isPilot ? '파일럿 1곡 생성' : '남은 곡 생성',
-          isPilot ? pilotPrompt(p) : batchPrompt(p))),
+        A('② 제출 인자 만들기', () => payloadDialog(p, target)),
         A('③ 결과 가져오기', () => importAudioDialog(p)),
         ...(isPilot ? [
           A('④ 들어보고 승인', () => { S.tab = '곡'; render(); }),
@@ -564,6 +563,7 @@ function stepActions(key, p) {
         ] : [
           A('진행 상황', () => run('batch-status', ['--project', K], '곡 상태 확인')),
         ]),
+        A('자물쇠 풀기', () => releaseDialog(p, target)),
       ],
     };
   }
@@ -633,6 +633,83 @@ function lyricsPrompt(p) {
     '- track-set 으로 제목·부제·주제를, track-lyrics 로 가사를 저장하고',
     '  마지막에 lyrics-validate 로 검사한 뒤 lyrics-collect 까지 해줘',
   ].join('\n');
+}
+
+/** 곡 하나의 제출 인자를 실제로 만들어 Claude 에 붙여넣을 형태로 복사한다.
+    이 화면에서는 크레딧이 나가지 않는다 — 인자를 만들고 원장에 자물쇠만 건다. */
+async function payloadDialog(p, index) {
+  if (!index) { toast('만들 곡이 없습니다.', true); return; }
+  const choices = p.tracks.map((t) => ({
+    value: String(t.index),
+    label: `${t.index}. ${t.title || '(제목 없음)'} — ${TRACK_STATUS[t.status] || t.status}`,
+  }));
+  const model = p.config.music_model || '';
+  modal('제출 인자 만들기', [
+    { key: 'index', label: '몇 번 곡인가요?', type: 'select', options: choices, value: String(index) },
+  ], async (v) => {
+    render();
+    const r = await query('submit-payload',
+      ['--project', p.key, '--index', v.index, '--claim']);
+    if (!r) return;
+    if (!r.ok) {
+      const d = r.data || {};
+      if (d.blocked) {
+        openSheet('⛔ 중복 생성 차단',
+          [`${v.index}번 곡은 같은 모델·프롬프트·가사로 이미 요청한 적이 있습니다.`,
+           `상태: ${(d.existing || {}).status}`,
+           `job_key: ${(d.existing || {}).provider_job_id || '(제출 직후, 미기록)'}`,
+           `크레딧: ${(d.existing || {}).credits}`,
+           '',
+           '같은 곡을 두 번 결제하지 않도록 막은 것입니다.',
+           '정말 다시 만들려면 [자물쇠 풀기] 를 누르세요. 크레딧이 다시 나갑니다.',
+          ].join('\n'));
+      } else {
+        openSheet('제출 인자 만들기 실패', (d.error || JSON.stringify(d, null, 2)));
+      }
+      return;
+    }
+    const d = r.data;
+    const text = [
+      '/playlist-studio',
+      `프로젝트: ${p.key}`,
+      '',
+      `${v.index}번 곡을 만들어줘.`,
+      `차감 예정: ${d.credits} cr (모델 ${d.arguments.model})`,
+      '',
+      '아래 인자를 하나도 바꾸지 말고 그대로 abocado_generate_audio 에 넣어줘:',
+      '',
+      '```json',
+      JSON.stringify(d.arguments, null, 2),
+      '```',
+      '',
+      '⚠️ 먼저 잔액을 확인하고 차감액을 보여준 뒤 내 승인을 받아. 승인 전에는 제출하지 마.',
+      '다 되면 결과 URL 과 job_key 를 알려줘. 내가 대시보드에 붙여넣을게.',
+    ].join('\n');
+    openSheet(`${v.index}번 곡 제출 인자 — ${d.credits} cr`, text);
+    copy(text, 'Claude 에 붙여넣을 내용을 복사했습니다');
+  }, el('div', { class: 'paidbox' },
+      model
+        ? `모델: ${model} — 이 버튼은 인자만 만듭니다. 크레딧은 Claude 가 제출할 때 나갑니다.`
+        : '⚠️ 모델을 아직 고르지 않았습니다. 먼저 [① 크레딧 계산] 에서 모델을 정하세요. '
+          + '안 그러면 가장 비싼 기본 모델이 쓰입니다.'));
+}
+
+/** 실패했거나 잘못 만든 요청의 자물쇠를 푼다. */
+function releaseDialog(p, index) {
+  modal('자물쇠 풀기', [
+    { key: 'index', label: '몇 번 곡인가요?', type: 'select',
+      options: p.tracks.map((t) => ({ value: String(t.index),
+        label: `${t.index}. ${t.title || ''}` })),
+      value: String(index || 1) },
+    { key: 'reason', label: '이유 (기록용)', value: '재시도' },
+  ], async (v) => {
+    render();
+    await run('ledger-release',
+      ['--project', p.key, '--index', v.index, '--reason', v.reason || '재시도'],
+      `${v.index}번 곡 자물쇠 해제`);
+  }, el('div', { class: 'paidbox' },
+      '⚠️ 자물쇠를 풀고 다시 만들면 크레딧이 또 차감됩니다. '
+      + '이미 완료된 곡은 풀리지 않습니다.'));
 }
 
 function pilotPrompt(p) {
