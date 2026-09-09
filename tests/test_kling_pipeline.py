@@ -11,6 +11,7 @@ from kling.kling_pipeline import (  # noqa: E402
     MAX_DURATION,
     MIN_DURATION,
     KlingPipelineError,
+    SOUND,
     build_payloads,
     build_plan,
     find_duplicates,
@@ -151,6 +152,13 @@ def test_payload_shape():
     assert first["duration"] == 5
     roles = [m["role"] for m in first["medias"]]
     assert roles == ["start_image", "end_image"]
+
+
+def test_payload_forces_sound_off():
+    # sound 기본값이 on 이면 초당 1.75 가 되어 Wan 과 같아진다. 반드시 꺼서 보내야 한다.
+    assert SOUND == "off"
+    for payload in build_payloads(build_plan("tunnel", SCENES)):
+        assert payload["params"]["sound"] == "off"
 
 
 def test_payload_omits_missing_media():

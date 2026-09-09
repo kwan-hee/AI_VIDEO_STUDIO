@@ -13,10 +13,12 @@ Kling-Only Pipeline (Sprint 12)
   5. 구조화 dict 만 반환한다. 외부 API 호출 없음.
 
 단가 근거.
-  Higgsfield 거래 내역과 생성 이력을 초 단위로 대조해 확인한 실측값이다.
-    Kling v3.0 : 5초 -> 6.25 / 6초 -> 7.50 / 7초 -> 8.75  => 초당 1.25
-    Wan 3.0    : 5초 -> 8.75 / 6초 -> 10.50 / 7초 -> 12.25 => 초당 1.75
-  같은 길이에서 Kling 이 28.6% 저렴하다.
+  Higgsfield 거래 내역과 get_cost 사전 조회로 확인한 실측값이다.
+    Kling v3.0 (sound=off) : 5초 -> 6.25 / 7초 -> 8.75  => 초당 1.25
+    Kling v3.0 (sound=on)  : 5초 -> 8.75              => 초당 1.75
+    Wan 3.0                : 5초 -> 8.75              => 초당 1.75
+  Kling 의 sound 기본값은 'on' 이다. 끄지 않으면 Wan 과 같은 값을 낸다.
+  28.6% 절감은 sound 를 꺼야만 성립하므로, 이 파이프라인은 항상 끈 채로 제출한다.
 
 출력 스키마: schemas/kling_plan_schema.json
 Sprint 1~5 파일은 수정하지 않는다.
@@ -41,6 +43,12 @@ STATIC_SHOT_DURATION = 4
 
 ASPECT_RATIO = "9:16"
 RESOLUTION = "720p"
+
+# Kling 의 sound 기본값은 'on' 이고 초당 0.5 크레딧이 붙는다.
+# 배경 음악과 내레이션은 뒤에서 따로 얹으므로 생성된 소리는 어차피 버려진다.
+# 이 값을 바꾸면 단가 전제가 무너지므로 페이로드에서 항상 강제한다.
+SOUND = "off"
+MODE = "std"
 
 # 중복 판정 임계값. 자카드 유사도가 이 값 이상이면 같은 정보를 두 번 전달한다고 본다.
 DUPLICATE_THRESHOLD = 0.60
@@ -234,6 +242,8 @@ def build_payloads(plan):
             "prompt": step["prompt"],
             "duration": step["duration"],
             "aspect_ratio": ASPECT_RATIO,
+            "sound": SOUND,
+            "mode": MODE,
         }
         if medias:
             params["medias"] = medias
@@ -247,7 +257,7 @@ def format_report(plan):
     """사람이 읽을 비용 보고서. 제출 전 확인용."""
     lines = [
         f"프로젝트: {plan['project']}",
-        f"엔진: {plan['engine_label']} (초당 {CREDITS_PER_SECOND} 크레딧 고정)",
+        f"엔진: {plan['engine_label']} (sound={SOUND}, 초당 {CREDITS_PER_SECOND} 크레딧)",
         f"장면 {plan['scene_count']}개 / 총 {plan['total_seconds']}초",
         f"예상 차감: {plan['estimated_cost']} 크레딧",
         f"Wan 3.0 으로 만들 경우: {plan['wan_equivalent_cost']} 크레딧 "
