@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Kling Only Execution Plan",
+  "type": "object",
+  "required": [
+    "project", "engine", "aspect_ratio", "resolution", "scene_count",
+    "total_seconds", "estimated_cost", "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "project": { "type": "string", "minLength": 1 },
+    "engine": { "const": "kling3_0" },
+    "engine_label": { "type": "string" },
+    "aspect_ratio": { "enum": ["9:16", "16:9", "1:1"] },
+    "resolution": { "enum": ["720p", "1080p"] },
+    "scene_count": { "type": "integer", "minimum": 1 },
+    "total_seconds": { "type": "integer", "minimum": 3 },
+    "estimated_cost": { "type": "number", "minimum": 0 },
+    "wan_equivalent_cost": { "type": "number", "minimum": 0 },
+    "saving_vs_wan": { "type": "number" },
+    "budget": { "type": ["number", "null"] },
+    "duplicates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["left", "right", "similarity", "refundable"],
+        "additionalProperties": false,
+        "properties": {
+          "left": { "type": "string" },
+          "right": { "type": "string" },
+          "similarity": { "type": "number", "minimum": 0, "maximum": 1 },
+          "refundable": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["order", "key", "engine", "duration", "cost", "prompt"],
+        "additionalProperties": false,
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "key": { "type": "string", "minLength": 1 },
+          "engine": { "const": "kling3_0" },
+          "duration": { "type": "integer", "minimum": 3, "maximum": 7 },
+          "requested_duration": { "type": ["integer", "null"] },
+          "clamped": { "type": "boolean" },
+          "cost": { "type": "number", "minimum": 0 },
+          "start_image": { "type": ["string", "null"] },
+          "end_image": { "type": ["string", "null"] },
+          "prompt": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

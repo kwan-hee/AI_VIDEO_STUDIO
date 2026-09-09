@@ -1,0 +1,32 @@
+{
+  "project": "river_tunnel",
+  "title": "강 밑을 지나는 터널은 어떻게 뚫는가",
+  "budget": 45,
+  "scenes": [
+    {
+      "key": "01_establish",
+      "duration": 5,
+      "prompt": "Locked-off camera. Wide cross-section view of a wide grey river seen from the side, the water surface rippling slowly and light shimmering through it, with a large circular concrete tunnel tube running horizontally through the soil strata deep beneath the riverbed. Fine sediment particles sink slowly through the water column. Single continuous take, no cuts, no text, no letters, no graphics, no watermark."
+    },
+    {
+      "key": "02_cutterhead",
+      "duration": 5,
+      "prompt": "Locked-off camera. A huge grey steel cutterhead with worn disc cutters rotates very slowly inside thick murky brown slurry, fine silt particles drifting upward past the rim, cold work lights raking across the wet metal. Single continuous take, no cuts, no text, no letters, no graphics, no watermark."
+    },
+    {
+      "key": "03_slurry_face",
+      "duration": 5,
+      "prompt": "Locked-off camera. Thick grey-brown slurry presses against a raw excavation face of wet sand and gravel inside the sealed chamber; the face stays completely intact and stable while only a slow swirl passes through the slurry and fine silt settles. Dim amber work lamp, damp steel bulkhead at the edge of frame. Single continuous take, no cuts, no text, no letters, no graphics, no watermark."
+    },
+    {
+      "key": "04_segment_ring",
+      "duration": 5,
+      "prompt": "Locked-off camera. A hydraulic erector arm lifts a curved precast concrete segment slowly and seats it into the tunnel lining ring, bolt pockets aligning, dust drifting through blue-white work lights, the completed ring curving away behind it. Single continuous take, no cuts, no text, no letters, no graphics, no watermark."
+    },
+    {
+      "key": "05_finished",
+      "duration": 5,
+      "prompt": "Locked-off camera. Interior of a finished road tunnel deep under the river, faint vehicle headlight streaks flowing away toward the distant vanishing point while continuous ceiling light strips recede into the depth, clean concrete lining walls. Single continuous take, no cuts, no text, no letters, no graphics, no watermark."
+    }
+  ]
+}
