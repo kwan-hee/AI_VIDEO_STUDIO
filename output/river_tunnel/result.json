@@ -1,0 +1,21 @@
+{
+  "project": "river_tunnel",
+  "title": "강 밑을 지나는 터널은 어떻게 뚫는가",
+  "engine": "kling3_0",
+  "settings": { "sound": "off", "mode": "std", "aspect_ratio": "9:16", "size": "720x1280" },
+  "predicted_cost": 31.25,
+  "actual_cost": 31.25,
+  "clips": [
+    { "order": 1, "key": "01_establish",   "job_id": "877b847a-6bfc-4ed6-b0cc-e64c4d4c642a", "duration": 5, "cost": 6.25,
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BkB9kTE85CSsRc8FDnorAjFc8R/hf_20260909_052624_877b847a-6bfc-4ed6-b0cc-e64c4d4c642a.mp4" },
+    { "order": 2, "key": "02_cutterhead",  "job_id": "cf2b70f9-e433-4701-9983-ca1fd5878508", "duration": 5, "cost": 6.25,
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BkB9kTE85CSsRc8FDnorAjFc8R/hf_20260909_052608_cf2b70f9-e433-4701-9983-ca1fd5878508.mp4" },
+    { "order": 3, "key": "03_slurry_face", "job_id": "92d0332c-e79c-46e1-a707-c6c4b09522a8", "duration": 5, "cost": 6.25,
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BkB9kTE85CSsRc8FDnorAjFc8R/hf_20260909_052609_92d0332c-e79c-46e1-a707-c6c4b09522a8.mp4" },
+    { "order": 4, "key": "04_segment_ring","job_id": "c80695c4-15cb-42ad-8d28-016cff3e3a1a", "duration": 5, "cost": 6.25,
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BkB9kTE85CSsRc8FDnorAjFc8R/hf_20260909_052608_c80695c4-15cb-42ad-8d28-016cff3e3a1a.mp4" },
+    { "order": 5, "key": "05_finished",    "job_id": "4f7e714a-6ffe-4f1d-8d88-8a54023dc420", "duration": 5, "cost": 6.25,
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BkB9kTE85CSsRc8FDnorAjFc8R/hf_20260909_052608_4f7e714a-6ffe-4f1d-8d88-8a54023dc420.mp4" }
+  ],
+  "note": "합성 미완. 이 세션의 egress 정책이 d8j0ntlcm91z4.cloudfront.net 접근을 차단해 클립을 내려받지 못했다. scripts/compose_river_tunnel.sh 를 CDN 접근이 가능한 환경에서 실행하면 한 편으로 합쳐진다."
+}
