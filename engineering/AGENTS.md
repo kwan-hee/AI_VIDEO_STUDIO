@@ -12,8 +12,7 @@
 - 산출물은 **전부 이 폴더 안에만** 쓴다.
 - 참고 자료나 스크립트가 필요하면 **이 폴더로 복사해서** 쓴다. 원본은 그대로 둔다.
 
-기존 폴더는 `wan3_0` 기준으로 돌아가는 검증된 작업장이다.
-이 폴더는 `kling3_0` 으로 검증하는 별도 작업장이다. 둘을 섞지 않는다.
+기존 폴더는 `wan3_0` 기준의 검증된 작업장이고 이 폴더는 `kling3_0` 전용이다. 섞지 않는다.
 
 ## 불변 제작 사슬
 
@@ -96,14 +95,12 @@ edge-tts 선희는 무료이므로 이 단계에서는 크레딧이 나가지 �
 
 ```
 [프로젝트]/
-  script/      APPROVED_NARRATION_KR.md, SOURCE.md, TITLE_DESCRIPTION.md
-  clean/       CLEAN 키프레임
-  info/        INFO 키프레임
-  video/       생성된 클립
-  edit/        make_tts.py, overlay.py, overlays.py, kenburns.py, assemble.py
-  manifests/   PROJECT_STATUS.md, IMAGE_SEQUENCE.md, jobs.json
-  prompts/     CLEAN_KEYFRAME_PROMPTS.md, INFOGRAPHIC_KEYFRAME_PROMPTS.md,
-               VIDEO_GENERATION_PROMPTS.md
+  script/     APPROVED_NARRATION_KR.md, SOURCE.md, TITLE_DESCRIPTION.md
+  clean/  info/  video/     키프레임과 클립
+  edit/       make_tts.py, overlay.py, overlays.py, kenburns.py, assemble.py
+  manifests/  PROJECT_STATUS.md, IMAGE_SEQUENCE.md, jobs.json
+  prompts/    CLEAN_KEYFRAME_PROMPTS.md, INFOGRAPHIC_KEYFRAME_PROMPTS.md,
+              VIDEO_GENERATION_PROMPTS.md
 ```
 
 CLEAN, INFO, MP4 는 일대일로 대응해야 한다.
@@ -162,9 +159,8 @@ CLEAN 이 진짜 첫 프레임이다. INFO 는 최종 그래픽 상태의 목표
 
 금지.
 
-- 모든 그래픽이 동시에 전체 화면에 페이드인, 평면 HUD 배치, 떨리는 글자, 뒤집힌 화살표
-- 과도한 네온, 판타지 에너지, 구조 변형, 물체 복제
-- 360도 회전, 휩 팬, 카메라 롤
+- 그래픽 동시 페이드인, 평면 HUD, 떨리는 글자, 뒤집힌 화살표
+- 과도한 네온, 판타지 에너지, 구조 변형, 물체 복제, 360도 회전, 휩 팬, 카메라 롤
 - 나레이션·대사·음악·새 자막·로고·워터마크 생성
 
 세로 프레임에 가로형 구도를 요청하면 장면이 90도 돌아갈 수 있다.
