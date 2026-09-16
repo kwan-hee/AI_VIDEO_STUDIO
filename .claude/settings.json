@@ -1,3 +1,26 @@
 {
-  "outputStyle": "fluent-korean"
+  "outputStyle": "fluent-korean",
+  "extraKnownMarketplaces": {
+    "understand-anything": {
+      "source": {
+        "source": "github",
+        "repo": "Egonex-AI/Understand-Anything"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "understand-anything@understand-anything": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
