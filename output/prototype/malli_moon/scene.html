@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>말리와 달님</title>
+<style>
+  :root {
+    --bg: #05081a;
+    --sub: #ffffff;
+    --sub-malli: #ffe58a;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; margin: auto; top: 50%; transform: translateY(-50%); }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #sub {
+    position: absolute; left: 0; right: 0; bottom: 7%;
+    text-align: center; font-family: "NanumSquareRound", "Nanum Gothic", sans-serif; font-weight: 700;
+    font-size: 2.7vw; color: var(--sub); letter-spacing: -0.02em;
+    text-shadow: 0 0 0.6vw rgba(10, 10, 40, .9), 0 0.15vw 0.3vw rgba(0, 0, 0, .8);
+    padding: 0 6%; opacity: 0;
+  }
+  #sub.malli { color: var(--sub-malli); }
+  #title {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; flex-direction: column; padding-bottom: 6%; box-sizing: border-box;
+    font-family: "NanumSquareRound", sans-serif; font-weight: 800; color: #fff6d6; opacity: 0;
+    text-shadow: 0 0 2vw rgba(255, 230, 150, .7);
+  }
+  #title .t1 { font-size: 5vw; }
+  #title .t2 { font-size: 1.6vw; margin-top: 1.2vw; opacity: .8; font-weight: 400; }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 1; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070d2b"/>
+      <stop offset=".45" stop-color="#16205a"/>
+      <stop offset=".8" stop-color="#3b3a84"/>
+      <stop offset="1" stop-color="#6a5a9e"/>
+    </linearGradient>
+    <radialGradient id="moonGlow">
+      <stop offset="0" stop-color="#fff6c8" stop-opacity=".75"/>
+      <stop offset=".35" stop-color="#ffe9a0" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#ffe9a0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moonFill" cx=".42" cy=".38" r=".7">
+      <stop offset="0" stop-color="#fffbe6"/>
+      <stop offset=".7" stop-color="#fff0b8"/>
+      <stop offset="1" stop-color="#f6dc8c"/>
+    </radialGradient>
+    <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f7a"/><stop offset="1" stop-color="#262a5c"/>
+    </linearGradient>
+    <linearGradient id="hillMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a4a6e"/><stop offset="1" stop-color="#1b2f4e"/>
+    </linearGradient>
+    <linearGradient id="hillNear" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f6070"/><stop offset="1" stop-color="#173040"/>
+    </linearGradient>
+    <radialGradient id="rim" cx=".3" cy="0" r="1">
+      <stop offset="0" stop-color="#fff2b0" stop-opacity=".35"/>
+      <stop offset=".5" stop-color="#fff2b0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx=".5" cy=".5" r=".75">
+      <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".55"/>
+    </radialGradient>
+    <radialGradient id="windowGlow">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 손그림 느낌: 외곽선을 미세하게 흔든다 -->
+    <filter id="wobble" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- 종이 질감 -->
+    <filter id="paper" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="3"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1.4 1.05"/>
+    </filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="2"/></filter>
+    <path id="star4" d="M0,-10 Q1.5,-1.5 10,0 Q1.5,1.5 0,10 Q-1.5,1.5 -10,0 Q-1.5,-1.5 0,-10Z"/>
+  </defs>
+
+  <g id="world">
+    <rect x="-400" y="-600" width="2720" height="2000" fill="url(#sky)"/>
+    <g id="stars"></g>
+
+    <!-- 달님 -->
+    <g id="moon">
+      <circle r="420" fill="url(#moonGlow)" id="glow"/>
+      <g filter="url(#wobble)">
+        <circle r="150" fill="url(#moonFill)" stroke="#e8c870" stroke-width="5"/>
+        <circle cx="-62" cy="-70" r="20" fill="#f3df9c" opacity=".7"/>
+        <circle cx="70" cy="-40" r="13" fill="#f3df9c" opacity=".7"/>
+        <circle cx="50" cy="78" r="17" fill="#f3df9c" opacity=".6"/>
+        <ellipse cx="-78" cy="30" rx="22" ry="12" fill="#ffa8a8" opacity=".55"/>
+        <ellipse cx="78" cy="30" rx="22" ry="12" fill="#ffa8a8" opacity=".55"/>
+        <!-- 눈: 감은 눈 / 뜬 눈 -->
+        <g id="moonEyeL" transform="translate(-48,-8)">
+          <path class="closed" d="M-18,0 Q0,12 18,0" fill="none" stroke="#7a5a2a" stroke-width="6" stroke-linecap="round"/>
+          <g class="open"><ellipse rx="11" ry="15" fill="#5a3f1f"/><circle cx="-3" cy="-5" r="4" fill="#fff"/></g>
+        </g>
+        <g id="moonEyeR" transform="translate(48,-8)">
+          <path class="closed" d="M-18,0 Q0,12 18,0" fill="none" stroke="#7a5a2a" stroke-width="6" stroke-linecap="round"/>
+          <path class="wink" d="M-18,2 Q0,-12 18,2" fill="none" stroke="#7a5a2a" stroke-width="6" stroke-linecap="round"/>
+          <g class="open"><ellipse rx="11" ry="15" fill="#5a3f1f"/><circle cx="-3" cy="-5" r="4" fill="#fff"/></g>
+        </g>
+        <path id="moonMouth" d="M-26,40 Q0,58 26,40" fill="none" stroke="#7a5a2a" stroke-width="6" stroke-linecap="round"/>
+      </g>
+    </g>
+
+    <!-- 먼 언덕 -->
+    <path filter="url(#wobble)" fill="url(#hillFar)" d="M-400,720 C-100,640 150,610 420,660 C640,700 800,640 1050,610 C1300,580 1600,650 2320,700 L2320,1400 L-400,1400Z"/>
+    <!-- 중간 언덕 + 집 -->
+    <g filter="url(#wobble)">
+      <path fill="url(#hillMid)" d="M-400,860 C-150,770 120,740 380,770 C620,800 820,860 1100,850 C1400,840 1700,790 2320,830 L2320,1400 L-400,1400Z"/>
+      <g transform="translate(250,760)">
+        <circle cx="35" cy="-35" r="120" fill="url(#windowGlow)" id="houseGlow"/>
+        <path d="M-10,0 L-10,-70 L35,-115 L80,-70 L80,0Z" fill="#1d2448" stroke="#11163a" stroke-width="4"/>
+        <path d="M-22,-66 L35,-125 L92,-66" fill="none" stroke="#3a2a4a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="20" y="-62" width="30" height="28" rx="4" fill="#ffd27a"/>
+        <path d="M35,-62 V-34 M20,-48 H50" stroke="#c48a3a" stroke-width="3"/>
+      </g>
+    </g>
+    <!-- 나무 -->
+    <g filter="url(#wobble)" transform="translate(1720,880)">
+      <path d="M-14,0 C-10,-80 -12,-140 -6,-200 L8,-200 C12,-140 10,-80 16,0Z" fill="#14233a"/>
+      <circle cx="0" cy="-250" r="95" fill="#183049"/>
+      <circle cx="-70" cy="-200" r="65" fill="#183049"/>
+      <circle cx="70" cy="-205" r="70" fill="#1a3450"/>
+      <circle cx="-20" cy="-310" r="60" fill="#1a3450"/>
+    </g>
+    <!-- 가까운 언덕 -->
+    <g filter="url(#wobble)">
+      <path fill="url(#hillNear)" d="M-400,1000 C0,940 500,930 900,940 C1150,946 1300,905 1500,900 C1750,895 2000,960 2320,1000 L2320,1400 L-400,1400Z"/>
+      <path fill="url(#rim)" d="M-400,1000 C0,940 500,930 900,940 C1150,946 1300,905 1500,900 C1750,895 2000,960 2320,1000 L2320,1060 L-400,1060Z"/>
+      <g id="grass" stroke="#4f8a8a" stroke-width="4" stroke-linecap="round" fill="none"></g>
+      <g id="flowers"></g>
+    </g>
+    <g id="fireflies"></g>
+
+    <!-- 말리 -->
+    <g id="malli" transform="translate(1380,912) scale(1.05)">
+      <ellipse cx="0" cy="4" rx="95" ry="14" fill="#0c1a28" opacity=".45"/>
+      <g filter="url(#wobble)" stroke="#2a2340" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+        <!-- 다리 -->
+        <rect x="-32" y="-70" width="22" height="66" rx="10" fill="#ffe1c7"/>
+        <rect x="10" y="-70" width="22" height="66" rx="10" fill="#ffe1c7"/>
+        <ellipse cx="-24" cy="-4" rx="24" ry="13" fill="#ff9fb6"/>
+        <ellipse cx="24" cy="-4" rx="24" ry="13" fill="#ff9fb6"/>
+        <!-- 왼팔(화면 왼쪽) -->
+        <path d="M-40,-160 Q-70,-130 -72,-98" fill="none" stroke="#9cc7f0" stroke-width="26"/>
+        <path d="M-40,-160 Q-70,-130 -72,-98" fill="none" stroke="#2a2340" stroke-width="0"/>
+        <circle cx="-72" cy="-92" r="15" fill="#ffe1c7"/>
+        <!-- 잠옷 -->
+        <path d="M-40,-178 Q0,-192 40,-178 L80,-60 Q0,-42 -80,-60Z" fill="#9cc7f0"/>
+        <g stroke="none" fill="#ffffff" opacity=".85">
+          <circle cx="-30" cy="-140" r="7"/><circle cx="18" cy="-150" r="6"/><circle cx="-50" cy="-90" r="7"/>
+          <circle cx="0" cy="-105" r="7"/><circle cx="45" cy="-95" r="6"/><circle cx="-15" cy="-70" r="5"/><circle cx="30" cy="-125" r="5"/>
+        </g>
+        <path d="M-22,-182 Q0,-168 22,-182" fill="none" stroke="#2a2340" stroke-width="4"/>
+        <!-- 머리 -->
+        <g id="head">
+          <circle cx="0" cy="-285" r="112" fill="#6b4026"/>
+          <path d="M-108,-290 Q-120,-220 -92,-200 L-70,-215 Z" fill="#6b4026"/>
+          <path d="M108,-290 Q120,-220 92,-200 L70,-215 Z" fill="#6b4026"/>
+          <ellipse cx="0" cy="-268" rx="92" ry="86" fill="#ffe1c7"/>
+          <path d="M-100,-288 Q-95,-392 0,-394 Q95,-392 100,-288 Q72,-330 42,-312 Q20,-348 -4,-316 Q-40,-342 -62,-308 Q-86,-322 -100,-288Z" fill="#6b4026"/>
+          <g id="pin" transform="translate(62,-350) rotate(15)">
+            <path d="M0,-24 L7,-8 L24,-7 L11,4 L15,21 L0,12 L-15,21 L-11,4 L-24,-7 L-7,-8Z" fill="#ffd84a" stroke="#c9922a" stroke-width="3"/>
+          </g>
+          <g stroke="none">
+            <ellipse id="cheekL" cx="-58" cy="-232" rx="19" ry="11" fill="#ff8fa3" opacity=".55"/>
+            <ellipse id="cheekR" cx="58" cy="-232" rx="19" ry="11" fill="#ff8fa3" opacity=".55"/>
+            <g id="eyes">
+              <g class="eye" transform="translate(-34,-262)"><g class="lid"><ellipse rx="13" ry="18" fill="#2a2235"/><circle cx="-4" cy="-7" r="5.5" fill="#fff"/><circle cx="4" cy="5" r="2.5" fill="#fff"/></g><path class="joy" d="M-15,4 Q0,-15 15,4" fill="none" stroke="#2a2235" stroke-width="5.5" stroke-linecap="round" opacity="0"/></g>
+              <g class="eye" transform="translate(34,-262)"><g class="lid"><ellipse rx="13" ry="18" fill="#2a2235"/><circle cx="-4" cy="-7" r="5.5" fill="#fff"/><circle cx="4" cy="5" r="2.5" fill="#fff"/></g><path class="joy" d="M-15,4 Q0,-15 15,4" fill="none" stroke="#2a2235" stroke-width="5.5" stroke-linecap="round" opacity="0"/></g>
+            </g>
+          </g>
+          <path id="mouthSmile" d="M-12,-226 Q0,-215 12,-226" fill="none" stroke="#7a3a3a" stroke-width="4"/>
+          <ellipse id="mouthOpen" cx="0" cy="-222" rx="11" ry="9" fill="#c2505a" stroke="#7a3a3a" stroke-width="3" opacity="0"/>
+          <path id="mouthJoy" d="M-17,-230 Q0,-204 17,-230Z" fill="#c2505a" stroke="#7a3a3a" stroke-width="3.5" opacity="0"/>
+        </g>
+        <!-- 오른팔(흔드는 팔) -->
+        <g id="armR" transform="translate(40,-162)">
+          <path d="M0,0 Q22,30 28,62" fill="none" stroke="#2a2340" stroke-width="32"/>
+          <path d="M0,0 Q22,30 28,62" fill="none" stroke="#9cc7f0" stroke-width="22"/>
+          <circle cx="29" cy="70" r="15" fill="#ffe1c7"/>
+        </g>
+      </g>
+    </g>
+
+    <g id="sparkles"></g>
+  </g>
+
+  <rect width="1920" height="1080" fill="url(#vignette)"/>
+  <rect width="1920" height="1080" filter="url(#paper)" opacity=".5" style="mix-blend-mode:multiply"/>
+</svg>
+<div id="sub"></div>
+<div id="title"><div class="t1">말리가 달님을 만난 날</div><div class="t2">말리 동화 · 시제품 장면</div></div>
+<div id="fade"></div>
+</div>
+
+<script>
+const DURATION = 24;
+const SUBS = [
+  { t0: 1.8,  t1: 6.4,  text: "별들이 하나둘 반짝이던 밤,<br>말리는 좀처럼 잠이 오지 않았어요." },
+  { t0: 6.7,  t1: 11.8, text: "그때, 언덕 너머로<br>동그란 달님이 살며시 떠올랐어요." },
+  { t0: 12.2, t1: 15.6, text: "“달님, 안녕? 나랑 같이 놀래?”", malli: true },
+  { t0: 16.0, t1: 21.0, text: "그러자 달님이 반짝, 하고<br>윙크를 해 주었답니다." },
+];
+const WINK_AT = 17.6;
+
+// 결정적 난수(프레임마다 같은 결과)
+let seed = 42;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  parent && parent.appendChild(e);
+  return e;
+};
+
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const smooth = (a, b, t) => { const x = clamp((t - a) / (b - a)); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// 별
+const starsG = document.getElementById("stars");
+const stars = [];
+for (let i = 0; i < 110; i++) {
+  const x = rnd() * 2600 - 340, y = rnd() * 1250 - 560;
+  const big = rnd() < 0.18;
+  const node = big
+    ? el("use", { href: "#star4", fill: "#fff7d0" }, starsG)
+    : el("circle", { r: 1.5 + rnd() * 2.2, fill: "#fffbe8" }, starsG);
+  stars.push({ node, x, y, big, s: big ? 0.9 + rnd() * 1.2 : 1, sp: 1 + rnd() * 2.5, ph: rnd() * 6.28 });
+}
+// 풀과 꽃
+const grassG = document.getElementById("grass");
+for (let i = 0; i < 70; i++) {
+  const x = rnd() * 2600 - 300, y = 960 + rnd() * 110, h = 14 + rnd() * 18, b = (rnd() - .5) * 12;
+  el("path", { d: `M${x},${y} q${b},${-h / 2} ${b * 1.6},${-h}` }, grassG);
+}
+const flowersG = document.getElementById("flowers");
+for (let i = 0; i < 16; i++) {
+  const x = rnd() * 2200 - 140, y = 975 + rnd() * 90;
+  const c = ["#ffe58a", "#ffb3c6", "#cfe8ff"][i % 3];
+  const g = el("g", { transform: `translate(${x},${y})` }, flowersG);
+  for (let k = 0; k < 5; k++) el("circle", { cx: Math.cos(k * 1.256) * 6, cy: Math.sin(k * 1.256) * 6, r: 5, fill: c }, g);
+  el("circle", { r: 3.5, fill: "#f4a640" }, g);
+}
+// 반딧불이
+const ffG = document.getElementById("fireflies");
+const flies = [];
+for (let i = 0; i < 14; i++) {
+  const g = el("g", {}, ffG);
+  el("circle", { r: 14, fill: "#fff3a0", opacity: .25, filter: "url(#soft)" }, g);
+  el("circle", { r: 4, fill: "#fffbd0" }, g);
+  flies.push({ g, x: rnd() * 1900, y: 720 + rnd() * 280, ax: 30 + rnd() * 60, ay: 15 + rnd() * 30, sp: .3 + rnd() * .5, ph: rnd() * 6.28 });
+}
+// 윙크 반짝이
+const spG = document.getElementById("sparkles");
+const sparks = [];
+for (let i = 0; i < 16; i++) {
+  const n = el("use", { href: "#star4", fill: i % 2 ? "#fff3a8" : "#ffffff" }, spG);
+  sparks.push({ n, a: rnd() * Math.PI * 2, d: 140 + rnd() * 380, s: 1 + rnd() * 1.8, delay: rnd() * .5, toward: i < 7 });
+}
+
+const $ = id => document.getElementById(id);
+const world = $("world"), moon = $("moon"), glow = $("glow"), malli = $("malli"), head = $("head"), armR = $("armR");
+const eyes = [...document.querySelectorAll("#eyes .lid")];
+const joyEyes = [...document.querySelectorAll("#eyes .joy")];
+const sub = $("sub"), title = $("title"), fade = $("fade");
+const moonEyes = ["moonEyeL", "moonEyeR"].map($);
+
+function setMoonEye(g, mode) {
+  for (const c of g.children) c.style.opacity = c.classList.contains(mode) ? 1 : 0;
+}
+
+function render(t) {
+  // 카메라
+  let cx = lerp(960, 960, smooth(0, 5, t)), cy = lerp(160, 540, smooth(0.2, 4.2, t)), s = lerp(1.3, 1.0, smooth(0.2, 4.2, t));
+  const push = smooth(11.8, 13, t) * (1 - smooth(15.6, 17, t));
+  cx = lerp(cx, 1120, push); cy = lerp(cy, 590, push); s = lerp(s, 1.12, push);
+  const out = smooth(20.5, 24, t);
+  s = lerp(s, 0.96, out);
+  world.setAttribute("transform", `translate(960,540) scale(${s}) translate(${-cx},${-cy})`);
+
+  // 별 반짝임
+  for (const st of stars) {
+    const tw = 0.55 + 0.45 * Math.sin(t * st.sp + st.ph);
+    st.node.setAttribute("opacity", tw.toFixed(3));
+    st.node.setAttribute("transform", `translate(${st.x},${st.y}) scale(${(st.big ? st.s * (0.8 + 0.3 * tw) : 1).toFixed(3)})`);
+  }
+  // 반딧불이
+  for (const f of flies) {
+    const x = f.x + Math.sin(t * f.sp + f.ph) * f.ax, y = f.y + Math.sin(t * f.sp * 1.7 + f.ph) * f.ay;
+    f.g.setAttribute("transform", `translate(${x},${y})`);
+    f.g.setAttribute("opacity", (0.35 + 0.65 * Math.max(0, Math.sin(t * 1.3 + f.ph * 2))).toFixed(3));
+  }
+  $("houseGlow").setAttribute("opacity", (0.75 + 0.15 * Math.sin(t * 2.1)).toFixed(3));
+
+  // 달님 떠오르기
+  const rise = smooth(6.6, 11.5, t);
+  const mx = 560, my = lerp(860, 330, rise) + Math.sin(t * 0.9) * 4 * rise;
+  moon.setAttribute("transform", `translate(${mx},${my}) rotate(${lerp(-8, 0, rise)})`);
+  glow.setAttribute("opacity", (rise * (0.85 + 0.15 * Math.sin(t * 1.6)) + 0.35 * Math.exp(-((t - WINK_AT) ** 2) * 4)).toFixed(3));
+  const awake = t > 13.2;
+  const winking = t > WINK_AT && t < WINK_AT + 0.9;
+  setMoonEye(moonEyes[0], awake ? "open" : "closed");
+  setMoonEye(moonEyes[1], winking ? "wink" : awake ? "open" : "closed");
+  const grin = smooth(13, 14, t);
+  $("moonMouth").setAttribute("d", `M-26,40 Q0,${lerp(58, 72, grin)} 26,40`);
+
+  // 말리 몸 흔들림(숨쉬기)
+  const breath = Math.sin(t * 2.2) * 0.012;
+  const hop = t > WINK_AT + 0.3 && t < WINK_AT + 1.4 ? Math.sin((t - WINK_AT - 0.3) / 1.1 * Math.PI) * 38 : 0;
+  malli.setAttribute("transform", `translate(1380,${912 - hop}) scale(${1.05 + breath},${1.05 - breath})`);
+
+  // 고개: 처음엔 살짝 졸린 듯 갸웃 → 달님 쪽으로 올려다봄
+  const look = smooth(8.5, 10.5, t);
+  const tilt = lerp(6 + Math.sin(t * 1.1) * 3, -10, look);
+  head.setAttribute("transform", `rotate(${tilt} 0 -185)`);
+  // 눈 깜빡임 + 시선
+  const blinks = [2.6, 5.4, 9.2, 14.9, 20.3];
+  let lid = 1;
+  for (const b of blinks) { const d = Math.abs(t - b); if (d < 0.12) lid = Math.min(lid, d / 0.12); }
+  const joy = t > WINK_AT + 0.2 && t < WINK_AT + 2.6; // 웃으며 눈이 반달
+  const ex = lerp(0, -7, look), ey = lerp(2, -8, look);
+  for (const e of eyes) { e.setAttribute("transform", `translate(${ex},${ey}) scale(1,${Math.max(0.08, lid)})`); e.setAttribute("opacity", joy ? 0 : 1); }
+  for (const e of joyEyes) { e.setAttribute("transform", `translate(${ex},${ey})`); e.setAttribute("opacity", joy ? 1 : 0); }
+  const blush = 0.5 + 0.4 * smooth(WINK_AT, WINK_AT + 0.6, t);
+  $("cheekL").setAttribute("opacity", blush); $("cheekR").setAttribute("opacity", blush);
+  // 말할 때 입 움직임
+  const talking = t > 12.3 && t < 15.3;
+  const mo = talking ? 0.5 + 0.5 * Math.abs(Math.sin(t * 13)) : 0;
+  $("mouthOpen").setAttribute("opacity", mo > 0.05 ? 1 : 0);
+  $("mouthOpen").setAttribute("ry", (4 + 7 * mo).toFixed(2));
+  $("mouthJoy").setAttribute("opacity", joy ? 1 : 0);
+  $("mouthSmile").setAttribute("opacity", mo > 0.05 || joy ? 0 : 1);
+  // 손 흔들기
+  const raise = smooth(11.9, 12.6, t) * (1 - smooth(16.2, 17.0, t));
+  const wave = Math.sin(t * 9) * 18 * raise;
+  armR.setAttribute("transform", `translate(40,-162) rotate(${-128 * raise + wave}) scale(1,${1 + 0.4 * raise})`);
+
+  // 윙크 반짝이: 달님에서 말리 쪽으로 퍼짐
+  const sx = 600, sy = 320;
+  for (const p of sparks) {
+    const k = clamp((t - WINK_AT - p.delay) / 1.8);
+    const vis = k > 0 && k < 1 ? Math.sin(k * Math.PI) : 0;
+    const a = p.toward ? Math.atan2(560, 780) + (p.a - 3.14) * 0.15 : p.a;
+    const d = p.toward ? 820 * k : p.d * k;
+    p.n.setAttribute("transform", `translate(${sx + Math.cos(a) * d},${sy + Math.sin(a) * d}) scale(${p.s * (0.6 + vis)}) rotate(${k * 180})`);
+    p.n.setAttribute("opacity", vis.toFixed(3));
+  }
+
+  // 자막
+  let shown = null, so = 0;
+  for (const s of SUBS) if (t >= s.t0 - 0.3 && t <= s.t1 + 0.3) { shown = s; so = smooth(s.t0 - 0.3, s.t0, t) * (1 - smooth(s.t1, s.t1 + 0.3, t)); }
+  if (shown) { if (sub.dataset.k !== shown.text) { sub.innerHTML = shown.text; sub.dataset.k = shown.text; sub.className = shown.malli ? "malli" : ""; } }
+  sub.style.opacity = so;
+
+  // 타이틀 · 페이드
+  title.style.opacity = smooth(21.3, 22.4, t) * (1 - smooth(23.3, 24, t));
+  fade.style.opacity = Math.max(1 - smooth(0, 1.2, t), smooth(23.2, 24, t));
+}
+window.render = render;
+window.DURATION = DURATION;
+
+if (!/capture/.test(location.search)) {
+  let start = performance.now();
+  const loop = now => {
+    let t = (now - start) / 1000;
+    if (t > DURATION + 1.5) { start = now; t = 0; }
+    render(Math.min(t, DURATION));
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+} else {
+  render(0);
+}
+</script>
+</body>
+</html>
