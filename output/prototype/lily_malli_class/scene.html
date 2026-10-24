@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>말리의 동화나라</title>
+<style>
+  :root { --bg: #000; --title: #5b4b45; --title-sub: #8a776c; --cream: #f5eee3; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; height: 100vh; width: 56.25vh; max-width: 100vw; max-height: 177.78vw; margin: 0 auto; overflow: hidden; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0;
+           font-family: "NanumSquareRound", "Nanum Gothic", sans-serif; color: var(--title); padding-top: 12%; box-sizing: border-box; }
+  #title .t1 { font-size: 4.3vh; font-weight: 700; letter-spacing: -0.02em; }
+  #title .t2 { font-size: 1.9vh; margin-top: 1.6vh; color: var(--title-sub); }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+<svg id="svg" viewBox="0 0 720 1280" preserveAspectRatio="xMidYMid slice">
+<defs>
+  <linearGradient id="skyDay" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#6f9fd6"/><stop offset=".45" stop-color="#a9c8e8"/><stop offset=".64" stop-color="#f1e6d4"/>
+  </linearGradient>
+  <linearGradient id="skyDusk" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1c3577"/><stop offset=".4" stop-color="#3d5ea8"/><stop offset=".64" stop-color="#b9a3cf"/>
+  </linearGradient>
+  <linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8cc66a"/><stop offset=".35" stop-color="#5fa548"/><stop offset="1" stop-color="#2f7a35"/>
+  </linearGradient>
+  <linearGradient id="farHill" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8fb4a0"/><stop offset="1" stop-color="#6e9f74"/>
+  </linearGradient>
+  <linearGradient id="nightB" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#16306e"/><stop offset=".55" stop-color="#2f56a3"/><stop offset="1" stop-color="#5e7fc0"/>
+  </linearGradient>
+  <linearGradient id="castleWall" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#f6d3c2"/><stop offset="1" stop-color="#d9a596"/>
+  </linearGradient>
+  <linearGradient id="roof" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#7183b5"/><stop offset="1" stop-color="#43507f"/>
+  </linearGradient>
+  <radialGradient id="warm"><stop offset="0" stop-color="#ffd890" stop-opacity=".9"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
+  <radialGradient id="bokeh"><stop offset="0" stop-color="#ffe2a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffe2a8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="vig" cx=".5" cy=".5" r=".8">
+    <stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/>
+  </radialGradient>
+  <filter id="cloudF" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feGaussianBlur in="d" stdDeviation="2.2"/>
+  </filter>
+  <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="5" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="3.5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="paper" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="2"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1.4 1.05"/>
+  </filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="1.4"/></filter>
+</defs>
+
+<!-- ============ 장면 A: 초원 → 노을 → 성 ============ -->
+<g id="sceneA">
+  <rect width="720" height="1280" fill="url(#skyDay)"/>
+  <rect id="duskSky" width="720" height="1280" fill="url(#skyDusk)" opacity="0"/>
+  <g id="starsA"></g>
+  <g id="clouds" filter="url(#cloudF)"></g>
+  <rect id="duskTint" width="720" height="830" fill="#3a3f8f" opacity="0" style="mix-blend-mode:multiply"/>
+  <g id="fwA" filter="url(#glow)"></g>
+  <g id="castle" filter="url(#wobble)"></g>
+  <path filter="url(#wobble)" fill="url(#farHill)" d="M-20,812 C80,790 160,778 260,786 C360,794 440,770 560,772 C640,773 700,786 740,792 L740,860 L-20,860Z"/>
+  <g id="treesA"></g>
+  <rect y="822" width="720" height="460" fill="url(#meadow)"/>
+  <g id="river"></g>
+  <g id="grass" stroke-linecap="round" fill="none"></g>
+  <rect id="duskGround" y="780" width="720" height="500" fill="#1b2a5c" opacity="0" style="mix-blend-mode:multiply"/>
+
+  <!-- 릴리 (옆모습) -->
+  <g id="lilyS" filter="url(#wobble)" stroke-linejoin="round" stroke-linecap="round">
+    <ellipse cx="0" cy="2" rx="80" ry="12" fill="#1d3b20" opacity=".3"/>
+    <g id="lilyBody">
+      <path id="hairBack" fill="#3b2721" stroke="#2a1a15" stroke-width="2"/>
+      <g id="armBack" ><path d="M-20,0 L22,0 Q24,90 18,168 L-14,168 Q-22,90 -20,0Z" fill="#38383f" stroke="#26262c" stroke-width="2.5"/><circle cx="2" cy="180" r="14" fill="#efc9b4"/></g>
+      <g id="legBack"><path d="M-32,0 L30,0 L34,226 L-26,226Z" fill="#323238" stroke="#24242a" stroke-width="2.5"/><ellipse cx="12" cy="234" rx="34" ry="13" fill="#e9e7e2" stroke="#9a9aa0" stroke-width="2"/></g>
+      <g id="legFront"><path d="M-32,0 L30,0 L34,226 L-26,226Z" fill="#41414a" stroke="#26262c" stroke-width="2.5"/><ellipse cx="12" cy="234" rx="34" ry="13" fill="#f7f6f2" stroke="#9a9aa0" stroke-width="2"/></g>
+      <rect x="-6" y="-492" width="26" height="46" rx="8" fill="#efc9b4"/>
+      <path d="M-52,-448 Q0,-474 50,-448 L66,-240 Q0,-222 -68,-240Z" fill="#4a4a53" stroke="#2a2a30" stroke-width="3"/>
+      <path d="M-20,-450 Q-4,-420 10,-452 M-56,-300 Q0,-288 60,-300" fill="none" stroke="#33333a" stroke-width="3"/>
+      <g id="armFront"><path d="M-20,0 L22,0 Q24,90 18,168 L-14,168 Q-22,90 -20,0Z" fill="#50505a" stroke="#2a2a30" stroke-width="2.5"/><circle cx="2" cy="180" r="14" fill="#f6d7c3"/></g>
+      <g id="lilyHead">
+        <ellipse cx="8" cy="0" rx="50" ry="56" fill="#f8dac8" stroke="#c99a86" stroke-width="2"/>
+        <path d="M56,-4 Q66,8 55,15" fill="none" stroke="#c99a86" stroke-width="2.5"/>
+        <ellipse cx="34" cy="-6" rx="6" ry="9" fill="#2c1e1a"/>
+        <path d="M26,-18 Q36,-22 44,-15" fill="none" stroke="#2c1e1a" stroke-width="3"/>
+        <ellipse cx="28" cy="20" rx="13" ry="7" fill="#ff9aa2" opacity=".5"/>
+        <path id="lilySMouth" d="M38,32 Q46,38 54,31" fill="none" stroke="#a5525a" stroke-width="3"/>
+        <path d="M-58,14 C-66,-58 -12,-82 40,-64 C62,-56 68,-34 62,-24 C44,-42 22,-34 2,-24 C-8,8 -30,26 -58,14Z" fill="#3b2721" stroke="#2a1a15" stroke-width="2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- 말리 (옆모습) -->
+  <g id="malliS" filter="url(#wobble)">
+    <ellipse cx="0" cy="3" rx="70" ry="9" fill="#1d3b20" opacity=".3"/>
+    <g id="malliSBody">
+      <g id="mTail" transform="translate(-72,-98)"><circle r="22" fill="#b8925e"/><circle r="19" fill="#f1dbb2"/><circle cx="-8" cy="-10" r="12" fill="#f6e4c2"/></g>
+      <g class="mLeg" data-x="-44" data-back="1"><rect x="-11" y="0" width="22" height="52" rx="11" fill="#e2c493" stroke="#b8925e" stroke-width="2"/></g>
+      <g class="mLeg" data-x="34" data-back="1"><rect x="-11" y="0" width="22" height="52" rx="11" fill="#e2c493" stroke="#b8925e" stroke-width="2"/></g>
+      <g id="mBodyFluff"></g>
+      <g class="mLeg" data-x="-30"><rect x="-11" y="0" width="22" height="52" rx="11" fill="#f3dfb8" stroke="#b8925e" stroke-width="2"/></g>
+      <g class="mLeg" data-x="48"><rect x="-11" y="0" width="22" height="52" rx="11" fill="#f3dfb8" stroke="#b8925e" stroke-width="2"/></g>
+      <g id="mHeadS">
+        <g id="mHeadFluff"></g>
+        <ellipse cx="40" cy="14" rx="25" ry="18" fill="#f9ecd3"/>
+        <ellipse cx="63" cy="6" rx="10" ry="8" fill="#2a1d1a"/>
+        <circle cx="22" cy="-6" r="7.5" fill="#2a1d1a"/><circle cx="24.5" cy="-8.5" r="2.6" fill="#fff"/>
+        <ellipse id="mTongueS" cx="50" cy="31" rx="7" ry="10" fill="#ff8aa0" stroke="#c85a6a" stroke-width="1.5"/>
+        <path d="M34,26 Q44,32 56,24" fill="none" stroke="#7a4a3a" stroke-width="2.5"/>
+        <g id="mEarS"></g>
+      </g>
+      <g transform="translate(46,-96) rotate(-25)">
+        <rect x="-24" y="-6" width="48" height="12" rx="6" fill="#e86a8a" stroke="#a83a55" stroke-width="1.5"/>
+        <path d="M0,0 L-20,-14 L-20,14Z M0,0 L20,-14 L20,14Z" fill="#d8303a" stroke="#9a1f28" stroke-width="2"/>
+        <circle r="6" fill="#c42530"/>
+        <circle cy="16" r="6" fill="#e5b450" stroke="#b9862a" stroke-width="1.5"/>
+      </g>
+    </g>
+  </g>
+  <rect width="720" height="1280" fill="url(#vig)"/>
+</g>
+
+<!-- ============ 장면 B: 불꽃놀이 클로즈업 ============ -->
+<g id="sceneB" opacity="0">
+  <rect width="720" height="1280" fill="url(#nightB)"/>
+  <g id="starsB"></g>
+  <g id="bokehB"></g>
+  <g id="fwB" filter="url(#glow)"></g>
+  <g id="camB">
+    <!-- 릴리 정면 -->
+    <g id="lilyF" filter="url(#wobble)" stroke-linejoin="round" stroke-linecap="round">
+      <g id="lilyFHead" transform="translate(442,620) scale(1.12) translate(-442,-560)">
+        <path fill="#3b2721" d="M282,520 C262,330 360,246 446,248 C540,250 626,332 604,520 C620,700 650,860 690,1060 L540,1060 C540,880 520,760 500,700 L380,700 C360,760 340,880 330,1060 L210,1060 C240,860 268,700 282,520Z"/>
+        <path d="M300,560 C292,700 290,820 270,960 M590,560 C602,700 616,820 640,960" stroke="#5a3a2e" stroke-width="5" fill="none" opacity=".6"/>
+      </g>
+      <path d="M170,1300 C180,980 290,870 442,860 C594,870 704,980 716,1300Z" fill="#3a3a43" stroke="#25252b" stroke-width="3"/>
+      <path d="M372,868 Q442,968 512,868 L528,1300 L356,1300Z" fill="#efe3cf" stroke="#c9b89c" stroke-width="2"/>
+      <rect x="398" y="740" width="88" height="150" rx="30" fill="#f2cdb9"/>
+      <path d="M400,846 Q442,906 484,846" fill="none" stroke="#d4a64a" stroke-width="3"/>
+      <circle cx="436" cy="884" r="7" fill="none" stroke="#d4a64a" stroke-width="3"/><circle cx="448" cy="884" r="7" fill="none" stroke="#d4a64a" stroke-width="3"/>
+      <g id="lilyFFace" transform="translate(442,620) scale(1.12) translate(-442,-560)">
+        <path d="M302,500 C300,640 370,734 442,738 C514,734 584,640 582,500 C582,398 520,350 442,350 C364,350 302,398 302,500Z" fill="#fbe1d0" stroke="#d3a58f" stroke-width="2.5"/>
+        <ellipse cx="358" cy="618" rx="36" ry="19" fill="#ff8e9c" opacity=".5" id="lilyBlushL"/>
+        <ellipse cx="526" cy="618" rx="36" ry="19" fill="#ff8e9c" opacity=".5" id="lilyBlushR"/>
+        <path d="M438,588 Q446,604 436,612" fill="none" stroke="#d09482" stroke-width="3"/>
+        <path id="browL" d="M346,478 Q384,462 418,476" fill="none" stroke="#4a2e24" stroke-width="5"/>
+        <path id="browR" d="M466,476 Q500,462 538,478" fill="none" stroke="#4a2e24" stroke-width="5"/>
+        <g class="lEye" transform="translate(384,548)">
+          <g class="open">
+            <ellipse rx="30" ry="32" fill="#fff"/>
+            <ellipse rx="23" ry="28" cy="2" fill="#7a4626"/><ellipse rx="13" ry="16" cy="4" fill="#2b160c"/>
+            <circle cx="-9" cy="-11" r="8" fill="#fff"/><circle cx="9" cy="12" r="3.5" fill="#fff"/>
+            <path d="M-36,-14 Q0,-44 36,-14" fill="none" stroke="#24140f" stroke-width="7"/>
+          </g>
+          <path class="joy" d="M-32,8 Q0,-26 32,8" fill="none" stroke="#24140f" stroke-width="7"/>
+        </g>
+        <g class="lEye" transform="translate(500,548)">
+          <g class="open">
+            <ellipse rx="30" ry="32" fill="#fff"/>
+            <ellipse rx="23" ry="28" cy="2" fill="#7a4626"/><ellipse rx="13" ry="16" cy="4" fill="#2b160c"/>
+            <circle cx="-9" cy="-11" r="8" fill="#fff"/><circle cx="9" cy="12" r="3.5" fill="#fff"/>
+            <path d="M-36,-14 Q0,-44 36,-14" fill="none" stroke="#24140f" stroke-width="7"/>
+          </g>
+          <path class="joy" d="M-32,8 Q0,-26 32,8" fill="none" stroke="#24140f" stroke-width="7"/>
+        </g>
+        <g id="lMouthO"><ellipse cx="442" cy="664" rx="15" ry="18" fill="#8a2e35" stroke="#6a1f25" stroke-width="2"/><ellipse cx="442" cy="674" rx="9" ry="6" fill="#ff8a98"/></g>
+        <g id="lMouthSmile"><path d="M400,646 Q442,712 484,646Z" fill="#8a2e35" stroke="#6a1f25" stroke-width="2.5"/><path d="M406,648 Q442,660 478,648 L474,660 Q442,670 410,660Z" fill="#fff"/><ellipse cx="442" cy="688" rx="18" ry="9" fill="#ff8a98"/></g>
+        <g id="lMouthLaugh"><path d="M390,640 Q442,736 494,640Z" fill="#8a2e35" stroke="#6a1f25" stroke-width="2.5"/><path d="M396,642 Q442,656 488,642 L482,656 Q442,670 402,656Z" fill="#fff"/><ellipse cx="442" cy="700" rx="22" ry="11" fill="#ff8a98"/></g>
+        <path fill="#3b2721" stroke="#2a1a15" stroke-width="2" d="M286,540 C262,330 380,262 452,266 C548,272 622,340 600,540 C590,470 568,428 530,404 C500,428 440,420 396,396 C350,430 312,470 286,540Z"/>
+        <path d="M396,396 C420,360 470,330 520,322" fill="none" stroke="#5a3a2e" stroke-width="4" opacity=".7"/>
+      </g>
+    </g>
+
+    <!-- 말리 정면 -->
+    <g id="malliF" filter="url(#wobble)">
+      <g id="mChest"></g>
+      <g id="malliFHead">
+        <g id="mEarsF"></g>
+        <g id="mHeadF"></g>
+        <ellipse cx="240" cy="930" rx="74" ry="58" fill="#f9ecd3"/>
+        <g class="mEye" transform="translate(184,856)"><g class="open"><circle r="23" fill="#2a1b14"/><circle cx="-7" cy="-8" r="8" fill="#fff"/><circle cx="7" cy="8" r="3" fill="#fff"/></g><path class="joy" d="M-22,6 Q0,-20 22,6" fill="none" stroke="#2a1b14" stroke-width="6" stroke-linecap="round"/></g>
+        <g class="mEye" transform="translate(296,856)"><g class="open"><circle r="23" fill="#2a1b14"/><circle cx="-7" cy="-8" r="8" fill="#fff"/><circle cx="7" cy="8" r="3" fill="#fff"/></g><path class="joy" d="M-22,6 Q0,-20 22,6" fill="none" stroke="#2a1b14" stroke-width="6" stroke-linecap="round"/></g>
+        <g id="mMouthF">
+          <path id="mMouthPath" d="M196,940 Q240,1000 284,940Z" fill="#5a2228" stroke="#3a1418" stroke-width="2.5"/>
+          <ellipse id="mTongueF" cx="240" cy="980" rx="24" ry="22" fill="#ff8aa0" stroke="#c85a6a" stroke-width="2"/>
+        </g>
+        <ellipse cx="240" cy="902" rx="28" ry="21" fill="#231816"/>
+        <ellipse cx="232" cy="895" rx="9" ry="5" fill="#fff" opacity=".45"/>
+        <path d="M240,922 L240,936" stroke="#3a2420" stroke-width="3"/>
+      </g>
+      <g id="collarF">
+        <path d="M150,1040 Q240,1078 330,1040 L330,1058 Q240,1096 150,1058Z" fill="#e86a8a" stroke="#a83a55" stroke-width="2"/>
+        <path d="M240,1062 C200,1020 160,1030 166,1066 C170,1100 210,1090 240,1068Z M240,1062 C280,1020 320,1030 314,1066 C310,1100 270,1090 240,1068Z" fill="#d8303a" stroke="#9a1f28" stroke-width="3"/>
+        <ellipse cx="240" cy="1065" rx="16" ry="14" fill="#c42530" stroke="#9a1f28" stroke-width="2"/>
+        <g transform="translate(240,1118)">
+          <path d="M-36,-14 a10,10 0 1,1 6,-8 L30,-22 a10,10 0 1,1 6,8 L36,14 a10,10 0 1,1 -6,8 L-30,22 a10,10 0 1,1 -6,-8Z" fill="#e8b84f" stroke="#a87a22" stroke-width="2.5"/>
+          <text y="7" text-anchor="middle" font-family="NanumSquareRound, sans-serif" font-weight="800" font-size="19" fill="#7a5414">Malli</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  <rect id="flash" width="720" height="1280" fill="#ffcf8a" opacity="0" style="mix-blend-mode:soft-light"/>
+  <rect width="720" height="1280" fill="url(#vig)"/>
+</g>
+
+<rect id="cream" width="720" height="1280" fill="#f5eee3" opacity="0"/>
+<rect width="720" height="1280" filter="url(#paper)" opacity=".45" style="mix-blend-mode:multiply" pointer-events="none"/>
+</svg>
+<div id="title"><div class="t1">말리의 동화나라 클래스</div><div class="t2">환상의 이야기 속으로 달려가요</div></div>
+<div id="fade"></div>
+</div>
+
+<script>
+const DURATION = 23;
+const NS = "http://www.w3.org/2000/svg";
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const smooth = (a, b, t) => { const x = clamp((t - a) / (b - a)); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k;
+const show = (node, on) => node.setAttribute("opacity", on ? 1 : 0);
+
+// 불꽃놀이 일정: [발사 시각, x, y, 색, 장면]
+const FW = [
+  [8.0, 210, 300, 0, "A"], [8.5, 470, 230, 1, "A"], [9.0, 600, 330, 0, "A"], [9.5, 130, 200, 2, "A"], [10.0, 380, 170, 0, "A"], [10.4, 560, 250, 1, "A"],
+  [11.2, 540, 200, 0, "B"], [11.9, 160, 260, 2, "B"], [12.6, 620, 120, 0, "B"], [13.2, 380, 110, 1, "B"], [13.8, 90, 150, 0, "B"],
+  [14.4, 560, 290, 2, "B"], [15.0, 300, 190, 0, "B"], [15.6, 650, 90, 1, "B"], [16.2, 170, 120, 0, "B"], [16.8, 470, 160, 2, "B"],
+  [17.4, 610, 300, 0, "B"], [18.0, 260, 180, 1, "B"],
+];
+const FW_COLORS = [["#ffd27a", "#fff1c4"], ["#ffa6c9", "#ffe0ec"], ["#ffe9a8", "#ffffff"]];
+const LAUNCH = 0.7, LIFE = 1.9;
+
+// ---------- 장면 A 구성 ----------
+const starsA = $("starsA");
+const starA = [];
+for (let i = 0; i < 70; i++) starA.push({ n: el("circle", { cx: rnd() * 720, cy: rnd() * 640, r: .8 + rnd() * 1.6, fill: "#fff" }, starsA), ph: rnd() * 6, sp: 1 + rnd() * 2 });
+
+const cloudsG = $("clouds");
+const clouds = [];
+const CLOUD_DEF = [[120, 170, 1.25], [520, 120, 1.05], [860, 260, 1.2], [1180, 150, 1.0], [330, 380, 0.85], [1000, 420, 0.8]];
+for (const [x, y, s] of CLOUD_DEF) {
+  const g = el("g", {}, cloudsG);
+  const puffs = [];
+  for (let k = 0; k < 9; k++) puffs.push([(rnd() - .5) * 260, (rnd() - .7) * 90, 50 + rnd() * 50]);
+  for (const [px, py, r] of puffs) el("circle", { cx: px, cy: py + 14, r, fill: "#9fb3cf" }, g);
+  for (const [px, py, r] of puffs) el("circle", { cx: px - 6, cy: py, r: r * .92, fill: "#ffffff" }, g);
+  for (const [px, py, r] of puffs.slice(0, 4)) el("circle", { cx: px - 14, cy: py - 12, r: r * .5, fill: "#fffaf0", opacity: .9 }, g);
+  clouds.push({ g, x, y, s });
+}
+
+const treesA = $("treesA");
+for (const [x, w] of [[40, 40], [110, 60], [230, 34], [520, 70], [600, 46], [690, 58]]) {
+  el("ellipse", { cx: x, cy: 806, rx: w * .7, ry: 16, fill: "#3f6b45" }, treesA);
+  el("ellipse", { cx: x + 8, cy: 800, rx: w * .45, ry: 12, fill: "#4d7d52" }, treesA);
+}
+
+// 성
+const castle = $("castle");
+(() => {
+  const w = "url(#castleWall)", r = "url(#roof)", st = { stroke: "#b07f74", "stroke-width": 2 };
+  const R = (x, y, wd, h) => el("rect", { x, y, width: wd, height: h, fill: w, ...st }, castle);
+  const C = (cx, y, wd, h) => el("path", { d: `M${cx - wd / 2 - 4},${y} L${cx},${y - h} L${cx + wd / 2 + 4},${y}Z`, fill: r, stroke: "#36406a", "stroke-width": 2 }, castle);
+  R(150, 750, 420, 70);
+  for (let x = 150; x < 570; x += 20) R(x, 740, 12, 12);
+  for (const [cx, top, wd, h] of [[160, 690, 30, 50], [560, 690, 30, 50], [240, 650, 34, 60], [480, 650, 34, 60]]) { R(cx - wd / 2, top, wd, 820 - top); C(cx, top, wd, h); }
+  R(300, 640, 120, 180);
+  for (const [cx, top, wd, h] of [[300, 600, 30, 70], [420, 600, 30, 70]]) { R(cx - wd / 2, top, wd, 820 - top); C(cx, top, wd, h); }
+  R(338, 540, 44, 120); C(360, 540, 44, 110);
+  R(352, 470, 16, 40); C(360, 470, 16, 40);
+  el("path", { d: "M340,820 L340,790 Q360,770 380,790 L380,820Z", fill: "#7a5a5a" }, castle);
+})();
+const castleWin = el("g", {}, castle);
+for (const [x, y] of [[352, 560], [362, 600], [318, 680], [392, 680], [318, 720], [392, 720], [236, 690], [476, 690], [236, 730], [476, 730], [292, 630], [414, 630], [180, 770], [540, 770], [260, 775], [460, 775]]) {
+  el("rect", { x: x - 4, y: y - 7, width: 8, height: 13, rx: 4, fill: "#ffd27a" }, castleWin);
+}
+const castleGlow = el("circle", { cx: 360, cy: 720, r: 230, fill: "url(#warm)", opacity: 0 }, castle);
+castle.insertBefore(castleGlow, castle.firstChild);
+
+// 개울
+const river = $("river");
+el("path", { d: "M-20,1010 C60,990 110,1000 150,1030 C190,1060 120,1100 -20,1120Z", fill: "#a8c7e8", opacity: .85 }, river);
+el("path", { d: "M-20,1030 C50,1015 95,1022 120,1040", fill: "none", stroke: "#fff", "stroke-width": 3, opacity: .6 }, river);
+
+// 풀잎
+const grassG = $("grass");
+const blades = [];
+for (let i = 0; i < 230; i++) {
+  const y = 830 + Math.pow(rnd(), 0.8) * 460;
+  const depth = (y - 820) / 460;
+  const n = el("path", { stroke: ["#4f9a3e", "#6db352", "#3d8236", "#86c46a"][i % 4], "stroke-width": (1.2 + depth * 3.2).toFixed(1) }, grassG);
+  blades.push({ n, x: rnd() * 900, y, h: 8 + depth * 46 * (0.6 + rnd() * .6), depth, ph: rnd() * 6 });
+}
+
+// 말리 옆모습 털
+const fluff = (g, pts, base, out, hi) => {
+  for (const [x, y, r] of pts) el("circle", { cx: x, cy: y, r: r + 3, fill: out }, g);
+  for (const [x, y, r] of pts) el("circle", { cx: x, cy: y, r, fill: base }, g);
+  if (hi) for (const [x, y, r] of pts) el("circle", { cx: x - r * .25, cy: y - r * .3, r: r * .45, fill: hi, opacity: .8 }, g);
+};
+fluff($("mBodyFluff"), [[-46, -82, 34], [-12, -92, 38], [24, -88, 36], [-30, -58, 30], [10, -60, 32], [40, -66, 28]], "#f3dfb8", "#b8925e", "#f9ecd4");
+const mHeadS = $("mHeadS");
+fluff($("mHeadFluff"), [[0, 0, 40], [-20, -28, 22], [14, -34, 22], [32, -12, 20], [-28, 6, 20], [6, 22, 22]], "#f3dfb8", "#b8925e", "#f9ecd4");
+fluff($("mEarS"), [[-16, 8, 18], [-22, 28, 16], [-14, 44, 13]], "#e4c695", "#b8925e");
+const mLegs = [...document.querySelectorAll(".mLeg")];
+
+// ---------- 장면 B 구성 ----------
+const starsB = $("starsB");
+const starB = [];
+for (let i = 0; i < 90; i++) starB.push({ n: el("circle", { cx: rnd() * 720, cy: rnd() * 800, r: .8 + rnd() * 1.8, fill: "#fff" }, starsB), ph: rnd() * 6, sp: 1 + rnd() * 2 });
+const bokehB = $("bokehB");
+const bokeh = [];
+for (let i = 0; i < 14; i++) bokeh.push({ n: el("circle", { cx: rnd() * 720, cy: 200 + rnd() * 700, r: 20 + rnd() * 40, fill: "url(#bokeh)" }, bokehB), ph: rnd() * 6 });
+
+const headPts = [];
+for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; headPts.push([240 + Math.cos(a) * 112, 880 + Math.sin(a) * 104, 50 + (k % 3) * 6]); }
+headPts.push([240, 880, 120], [200, 780, 46], [280, 780, 46], [240, 760, 50]);
+fluff($("mHeadF"), headPts, "#f3dfb8", "#b8925e", "#f9ecd4");
+fluff($("mEarsF"), [[118, 880, 52], [104, 950, 48], [112, 1020, 40], [362, 880, 52], [376, 950, 48], [368, 1020, 40]], "#e6c896", "#b08a58", "#efd6a8");
+const chest = [];
+for (let k = 0; k < 7; k++) chest.push([150 + k * 30, 1190 + (k % 2) * 24, 48]);
+for (let k = 0; k < 6; k++) chest.push([150 + k * 36, 1270, 56]);
+fluff($("mChest"), chest, "#f3dfb8", "#b8925e", "#f9ecd4");
+
+// ---------- 불꽃 ----------
+const fws = FW.map(([t0, x, y, c, sc]) => {
+  const parent = $(sc === "A" ? "fwA" : "fwB");
+  const g = el("g", {}, parent);
+  const big = sc === "B" ? 1.35 : 1;
+  const trail = el("line", { stroke: FW_COLORS[c][1], "stroke-width": 3, "stroke-linecap": "round" }, g);
+  const parts = [];
+  const N = 40;
+  for (let i = 0; i < N; i++) {
+    const a = i / N * Math.PI * 2 + rnd() * .08;
+    parts.push({ a, v: (150 + rnd() * 70) * big, n: el("line", { stroke: i % 3 ? FW_COLORS[c][0] : FW_COLORS[c][1], "stroke-width": (3.2 * big).toFixed(1), "stroke-linecap": "round" }, g) });
+  }
+  return { t0, x, y, g, trail, parts, sx: x + (rnd() - .5) * 60 };
+});
+const fwPos = (p, tau) => { const k = 2.2, d = p.v * (1 - Math.exp(-k * tau)) / k; return [Math.cos(p.a) * d, Math.sin(p.a) * d + 38 * tau * tau]; };
+function renderFW(t) {
+  let flash = 0;
+  for (const f of fws) {
+    const u = t - f.t0;
+    if (u < 0 || u > LAUNCH + LIFE) { f.g.setAttribute("opacity", 0); continue; }
+    f.g.setAttribute("opacity", 1);
+    if (u < LAUNCH) {
+      const k = u / LAUNCH, e = 1 - (1 - k) * (1 - k);
+      const y0 = 900, yy = lerp(y0, f.y, e), xx = lerp(f.sx, f.x, e);
+      f.trail.setAttribute("x1", xx); f.trail.setAttribute("y1", yy);
+      f.trail.setAttribute("x2", xx + (f.sx - f.x) * .05); f.trail.setAttribute("y2", yy + 40);
+      f.trail.setAttribute("opacity", .9);
+      for (const p of f.parts) p.n.setAttribute("opacity", 0);
+    } else {
+      f.trail.setAttribute("opacity", 0);
+      const tau = u - LAUNCH, fade = Math.pow(1 - tau / LIFE, 1.3);
+      flash = Math.max(flash, Math.exp(-tau * 2.5));
+      for (const p of f.parts) {
+        const [x1, y1] = fwPos(p, Math.max(0, tau - .12)), [x2, y2] = fwPos(p, tau);
+        p.n.setAttribute("x1", f.x + x1); p.n.setAttribute("y1", f.y + y1);
+        p.n.setAttribute("x2", f.x + x2); p.n.setAttribute("y2", f.y + y2);
+        p.n.setAttribute("opacity", (fade * (0.75 + 0.25 * Math.sin(tau * 30 + p.a * 7))).toFixed(3));
+      }
+    }
+  }
+  return flash;
+}
+
+// ---------- 달리기 속도와 걸음 위상 ----------
+function speed(t) {
+  if (t < 2) return 0;
+  if (t < 3) return 120 * smooth(2, 3, t);
+  if (t < 4) return 120;
+  if (t < 5) return lerp(120, 400, smooth(4, 5, t));
+  if (t < 9.4) return 400;
+  return 400 * (1 - smooth(9.4, 10.4, t));
+}
+const TRAVEL = [], DT = 1 / 96;
+{ let off = 0, ph = 0; for (let i = 0; i <= DURATION / DT + 1; i++) { TRAVEL.push([off, ph]); const t = i * DT, v = speed(t); off += v * DT; ph += (v > 1 ? 4 + v * 0.03 : 0) * DT; } }
+const travel = t => TRAVEL[Math.min(TRAVEL.length - 1, Math.round(t / DT))];
+
+const lEyes = [...document.querySelectorAll(".lEye")], mEyes = [...document.querySelectorAll(".mEye")];
+const setEyes = (eyes, joy, blink, sx = 0, sy = 0) => {
+  for (const e of eyes) {
+    const o = e.querySelector(".open"), j = e.querySelector(".joy");
+    o.setAttribute("opacity", joy ? 0 : 1); j.setAttribute("opacity", joy ? 1 : 0);
+    o.setAttribute("transform", `translate(${sx},${sy}) scale(1,${Math.max(.08, blink)})`);
+  }
+};
+const blinkAt = (t, list) => { let b = 1; for (const x of list) { const d = Math.abs(t - x); if (d < .1) b = Math.min(b, d / .1); } return b; };
+
+function renderA(t) {
+  const [off, ph] = travel(t), v = speed(t), run = v / 400;
+  const dusk = smooth(5.0, 9.0, t);
+  $("duskSky").setAttribute("opacity", dusk);
+  $("duskTint").setAttribute("opacity", dusk * .35);
+  $("duskGround").setAttribute("opacity", dusk * .45);
+  for (const s of starA) s.n.setAttribute("opacity", (smooth(6.5, 9, t) * (.5 + .5 * Math.sin(t * s.sp + s.ph))).toFixed(3));
+  for (const c of clouds) {
+    const x = ((c.x - off * .12 - t * 6) % 1500 + 1500) % 1500 - 300;
+    c.g.setAttribute("transform", `translate(${x},${c.y}) scale(${c.s * .82})`);
+  }
+  // 성: 노을이 질 무렵 지평선 위로 떠오른다
+  const rise = smooth(5.4, 8.0, t);
+  castle.setAttribute("transform", `translate(0,${lerp(260, 0, rise)})`);
+  castle.setAttribute("opacity", smooth(5.4, 6.4, t));
+  castleWin.setAttribute("opacity", smooth(7, 8.5, t));
+  castleGlow.setAttribute("opacity", smooth(7, 9, t) * .8);
+  $("river").setAttribute("transform", `translate(${lerp(-200, 0, smooth(7, 9.5, t))},0)`);
+  // 풀잎
+  for (const b of blades) {
+    const x = ((b.x - off * (0.35 + b.depth * 1.1)) % 900 + 900) % 900 - 90;
+    const sway = Math.sin(t * 2.2 + b.ph + x * .01) * (3 + b.depth * 6) + run * 4;
+    b.n.setAttribute("d", `M${x.toFixed(1)},${b.y.toFixed(1)} q${(sway * .4).toFixed(1)},${(-b.h / 2).toFixed(1)} ${sway.toFixed(1)},${(-b.h).toFixed(1)}`);
+  }
+  // 릴리 (옆모습)
+  const amp = v > 1 ? 14 + 24 * run : 0;
+  const s = Math.sin(ph), bob = Math.abs(Math.sin(ph)) * (2 + 12 * run);
+  const lx = lerp(300, 250, smooth(4, 9, t));
+  const lilyScale = lerp(1.0, .82, smooth(3.5, 9.5, t));
+  $("lilyS").setAttribute("transform", `translate(${lx},${1170 - bob}) scale(${lilyScale}) rotate(${(5 * run).toFixed(2)})`);
+  $("legFront").setAttribute("transform", `translate(0,-250) rotate(${(-amp * s).toFixed(2)})`);
+  $("legBack").setAttribute("transform", `translate(0,-250) rotate(${(amp * s).toFixed(2)})`);
+  $("armFront").setAttribute("transform", `translate(0,-432) rotate(${(amp * 1.2 * s + 8 * run).toFixed(2)})`);
+  $("armBack").setAttribute("transform", `translate(0,-432) rotate(${(-amp * 1.2 * s + 8 * run).toFixed(2)})`);
+  const look = t < 2 ? -14 : t < 10.2 ? lerp(-14, -2, smooth(2, 3, t)) : lerp(-2, -22, smooth(10.2, 10.8, t));
+  $("lilyHead").setAttribute("transform", `translate(14,-522) rotate(${look.toFixed(2)})`);
+  const sw = 10 + 46 * run + Math.sin(ph * 2) * 5 * run + Math.sin(t * 1.5) * 4;
+  $("hairBack").setAttribute("d", `M-30,-560 C-80,-520 ${-90 - sw * .5},-430 ${-104 - sw},-330 C${-80 - sw * .7},-322 -50,-340 -30,-370 C-14,-420 0,-470 10,-520Z`);
+  $("lilySMouth").setAttribute("d", t > 10.4 ? "M36,30 Q46,44 56,29" : "M38,32 Q46,38 54,31");
+  // 말리 (옆모습)
+  const mph = ph * 1.5, ms = Math.sin(mph), mrun = run;
+  const mbob = Math.abs(Math.sin(mph)) * (1 + 10 * mrun);
+  const mx = lerp(470, 430, smooth(4, 9, t)), mScale = lerp(1.0, .85, smooth(3.5, 9.5, t));
+  $("malliS").setAttribute("transform", `translate(${mx},${1200 - mbob}) scale(${mScale})`);
+  mLegs.forEach((g, i) => {
+    const a = (v > 1 ? 10 + 28 * mrun : 0) * ms * (i % 2 ? 1 : -1) * (g.dataset.back ? -1 : 1);
+    g.setAttribute("transform", `translate(${g.dataset.x},-52) rotate(${a.toFixed(2)})`);
+  });
+  const mLook = t < 2 ? -18 : t > 10.3 ? lerp(0, -24, smooth(10.3, 10.9, t)) : 0;
+  mHeadS.setAttribute("transform", `translate(62,-140) rotate(${mLook + Math.sin(mph) * 3 * mrun})`);
+  $("mTail").setAttribute("transform", `translate(-72,-98) rotate(${Math.sin(t * 14) * 18})`);
+  $("mTongueS").setAttribute("opacity", run > .3 || t > 10.4 ? 1 : 0);
+}
+
+function renderB(t) {
+  const k = clamp((t - 10.8) / 8);
+  for (const s of starB) s.n.setAttribute("opacity", (.4 + .6 * Math.sin(t * s.sp + s.ph) ** 2).toFixed(3));
+  for (const b of bokeh) b.n.setAttribute("opacity", (.4 + .4 * Math.sin(t * .8 + b.ph)).toFixed(3));
+  const sc = lerp(1.0, 1.08, smooth(10.8, 19, t));
+  $("camB").setAttribute("transform", `translate(360,800) scale(${sc}) translate(-360,-800)`);
+  // 표정 단계: 놀람 → 웃음 → 눈웃음
+  const phase = t < 13.2 ? 0 : t < 15.0 ? 1 : 2;
+  const lean = smooth(15.0, 16.2, t);
+  $("lilyF").setAttribute("transform", `translate(${-34 * lean},${10 * lean}) rotate(${-6 * lean} 442 900)`);
+  $("malliF").setAttribute("transform", `translate(${22 * lean},${-6 * lean}) rotate(${5 * lean} 240 1050)`);
+  const lookUp = phase === 0 ? -8 : -4;
+  setEyes(lEyes, phase === 2, blinkAt(t, [12.4, 14.2]), 0, lookUp);
+  setEyes(mEyes, phase === 2 && t > 15.3, blinkAt(t, [12.9, 14.6]), 0, phase === 0 ? -5 : -2);
+  show($("lMouthO"), phase === 0); show($("lMouthSmile"), phase === 1); show($("lMouthLaugh"), phase === 2);
+  const brow = phase === 0 ? -10 : phase === 1 ? -6 : 0;
+  $("browL").setAttribute("transform", `translate(0,${brow})`); $("browR").setAttribute("transform", `translate(0,${brow})`);
+  const blush = phase === 2 ? .7 : .5;
+  $("lilyBlushL").setAttribute("opacity", blush); $("lilyBlushR").setAttribute("opacity", blush);
+  // 말리 입: 살짝 벌림 → 활짝 → 혀 내밀고 웃음 (말하듯 헐떡임)
+  const pant = Math.abs(Math.sin(t * 7));
+  const open = phase === 0 ? .35 + .15 * pant : phase === 1 ? .7 + .2 * pant : .95 + .05 * pant;
+  $("mMouthPath").setAttribute("d", `M${200 - 6 * open},940 Q240,${950 + 60 * open} ${280 + 6 * open},940Z`);
+  $("mTongueF").setAttribute("ry", (10 + 18 * open).toFixed(1));
+  $("mTongueF").setAttribute("cy", (950 + 30 * open).toFixed(1));
+  $("malliFHead").setAttribute("transform", `rotate(${Math.sin(t * 3) * 1.5} 240 1000)`);
+}
+
+const sceneA = $("sceneA"), sceneB = $("sceneB");
+function render(t) {
+  const xf = smooth(10.6, 11.4, t);
+  sceneA.setAttribute("opacity", 1 - xf);
+  sceneB.setAttribute("opacity", xf);
+  sceneA.style.display = xf >= 1 ? "none" : "";
+  sceneB.style.display = xf <= 0 ? "none" : "";
+  const flash = renderFW(t);
+  if (xf < 1) renderA(t);
+  if (xf > 0) renderB(t);
+  $("flash").setAttribute("opacity", (flash * .55).toFixed(3));
+  // 마무리: 크림색 화면과 제목
+  $("cream").setAttribute("opacity", smooth(18.4, 20.4, t) * .86);
+  document.getElementById("title").style.opacity = smooth(19.4, 20.6, t);
+  document.getElementById("fade").style.opacity = smooth(22.3, 23, t);
+}
+window.render = render;
+window.DURATION = DURATION;
+
+if (!/capture/.test(location.search)) {
+  let start = performance.now();
+  const loop = now => { let t = (now - start) / 1000; if (t > DURATION + 1) { start = now; t = 0; } render(Math.min(t, DURATION)); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+} else render(0);
+</script>
+</body>
+</html>
